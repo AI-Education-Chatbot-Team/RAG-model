@@ -4,7 +4,7 @@
   "description": "This is a sample RAG model for the AI Education Chatbot Team",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
   },
   "repository": {
     "type": "git",
