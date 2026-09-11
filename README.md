@@ -16,3 +16,10 @@ Install dependencies:<br>
 
 To install dependencies run:<br>
 `pip install -r requirements.txt`
+
+## Loading New Documents
+To load new documents into Supabase run:<br>
+`python3 ingest.py`
+
+Currently to run chatbot run:<br>
+`python3 main.py`
