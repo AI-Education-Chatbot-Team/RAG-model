@@ -6,6 +6,7 @@ This is a RAG Chatbot made in Python for the AI Education Team
 - Groq - LLM for core RAG model
 - sentence-transformers - Generate embeddings through HuggingFace models
 - python-dotenv - Loads environment variables from .env
+- pypdf - Read and extract text from pdfs
 
 Set up venv:<br>
 `python3 -m venv myenv`<br>
