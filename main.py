@@ -56,5 +56,5 @@ Context:
     print()
 
 if __name__ == "__main__":
-    user_query = "What hardware does Groq use for speed?"
+    user_query = input("Ask a Question: ")
     ask_rag(user_query)
