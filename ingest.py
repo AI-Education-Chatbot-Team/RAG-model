@@ -23,7 +23,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
             text += page_text + "\n"
     return text
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+def chunk_text(text: str, chunk_size: int = 100, overlap: int = 20) -> list[str]:
     #Split text into word based chunks
     words = text.split()
     chunks = []
@@ -36,7 +36,7 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]
             start += chunk_size - overlap
     return chunks
 
-def load_pdfs_from_folder(folder_path: str) -> list[str]
+def load_pdfs_from_folder(folder_path: str) -> list[str]:
     #Extract and chunk text from every PDF in a folder
     all_chunks = []
     pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
@@ -52,6 +52,7 @@ def load_pdfs_from_folder(folder_path: str) -> list[str]
         all_chunks.extend(chunks)
         print(f"  -> {len(chunks)} chunks extracted")
 
+    embed_and_store(all_chunks)
     return all_chunks
         
 
@@ -72,13 +73,15 @@ if __name__ == "__main__":
     #Pointing to folder containing PDFs
     pdf_folder = "./pdfs"
 
+    load_pdfs_from_folder(pdf_folder)
+
     # Test "Documents"
-    knowledge_base = [
-        "Groq uses Language Processing Units (LPUs) to deliver extremely high-speed LLM inference.",
-        "Supabase provides open-source PostgreSQL database services with native pgvector support.",
-        "RAG enhances language models by retrieving relevant external data before generating responses."
-    ]
-        if knowledge_base:
-            embed_and_store(knowledge_base)
-        else:
-            print("No text extracted — nothing to ingest.")
+    # knowledge_base = [
+    #     "Groq uses Language Processing Units (LPUs) to deliver extremely high-speed LLM inference.",
+    #     "Supabase provides open-source PostgreSQL database services with native pgvector support.",
+    #     "RAG enhances language models by retrieving relevant external data before generating responses."
+    # ]
+    # if knowledge_base:
+    #     embed_and_store(knowledge_base)
+    # else:
+    #     print("No text extracted — nothing to ingest.")
