@@ -22,5 +22,8 @@ To install dependencies run:<br>
 To load new documents into Supabase run:<br>
 `python3 ingest.py`
 
-Currently to run chatbot run:<br>
+To run chatbot in terminal run:<br>
 `python3 main.py`
+
+To run localhost run:<br>
+`streamlit run app.py`
