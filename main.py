@@ -31,7 +31,7 @@ def ask_rag(question: str):
     context = retrieve_context(question)
     
     system_prompt = f"""You are a helpful assistant. Answer the question using ONLY the provided context.
-If the answer isn't in the context, state that you don't know.
+If the answer isn't in the context, state that it is not in the database.
 
 Context:
 {context}"""
