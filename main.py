@@ -31,7 +31,7 @@ def ask_rag(question: str):
     context = retrieve_context(question)
     
     system_prompt = f"""You are a helpful assistant. Answer the question using ONLY the provided context.
-If the answer isn't in the context, state that you don't know.
+If the answer isn't in the context, state that it is not in the database.
 
 Context:
 {context}"""
@@ -50,10 +50,16 @@ Context:
         stop=None
     )
 
-    print(f"\nQ: {question}\nA: ", end="")
-    for chunk in completion:
-        print(chunk.choices[0].delta.content or "", end="", flush=True)
-    print()
+    if __name__ == "__main__":
+        print(f"\nQ: {question}\nA: ", end="")
+        for chunk in completion:
+            print(chunk.choices[0].delta.content or "", end="", flush=True)
+        print()
+    else:
+        for chunk in completion:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
 
 if __name__ == "__main__":
     user_query = input("Ask a Question: ")

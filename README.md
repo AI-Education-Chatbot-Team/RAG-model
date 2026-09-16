@@ -6,6 +6,7 @@ This is a RAG Chatbot made in Python for the AI Education Team
 - Groq - LLM for core RAG model
 - sentence-transformers - Generate embeddings through HuggingFace models
 - python-dotenv - Loads environment variables from .env
+- streamlit - frontend webview
 - pypdf - Read and extract text from pdfs
 
 Set up venv:<br>
@@ -22,5 +23,8 @@ To install dependencies run:<br>
 To load new documents into Supabase run:<br>
 `python3 ingest.py`
 
-Currently to run chatbot run:<br>
+To run chatbot in terminal run:<br>
 `python3 main.py`
+
+To run localhost run:<br>
+`streamlit run app.py`
