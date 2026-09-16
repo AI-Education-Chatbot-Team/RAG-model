@@ -50,10 +50,16 @@ Context:
         stop=None
     )
 
-    print(f"\nQ: {question}\nA: ", end="")
-    for chunk in completion:
-        print(chunk.choices[0].delta.content or "", end="", flush=True)
-    print()
+    if __name__ == "__main__":
+        print(f"\nQ: {question}\nA: ", end="")
+        for chunk in completion:
+            print(chunk.choices[0].delta.content or "", end="", flush=True)
+        print()
+    else:
+        for chunk in completion:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
 
 if __name__ == "__main__":
     user_query = input("Ask a Question: ")
