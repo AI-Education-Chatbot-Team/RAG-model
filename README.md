@@ -1,6 +1,6 @@
 # Python RAG Chatbot
 This is a RAG Chatbot made in Python for the AI Education Team
-`https://ai-eductation-chatbot.streamlit.app/`
+`https://ai-education-chatbot.streamlit.app/`
 
 ## Dependencies
 - Supabase - Database/Document storage
