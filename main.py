@@ -37,12 +37,12 @@ Context:
 {context}"""
 
     completion = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question}
         ],
-        temperature=1,
+        temperature=0.3,
         max_completion_tokens=2048,
         top_p=1,
         reasoning_effort="medium",
