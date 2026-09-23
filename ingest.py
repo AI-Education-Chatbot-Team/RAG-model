@@ -13,18 +13,20 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-def extract_text_from_pdf(pdf_path: str) -> str:
+
+def extract_pages_from_pdf(pdf_source) -> list[dict]:
     #Extract all text from PDF
-    reader = PdfReader(pdf_path)
-    text = ""
-    for page in reader.pages:
+    reader = PdfReader(pdf_source)
+    pages = []
+    for i, page in enumerate(reader.pages, start=1):
         page_text = page.extract_text()
         if page_text:
-            text += page_text + "\n"
-    return text
+            pages.append({"page_number": i, "text": page_text})
+    return pages
+
 
 def chunk_text(text: str, chunk_size: int = 100, overlap: int = 20) -> list[str]:
-    #Split text into word based chunks
+    # Split text into word based chunks
     words = text.split()
     chunks = []
     start = 0
@@ -33,11 +35,33 @@ def chunk_text(text: str, chunk_size: int = 100, overlap: int = 20) -> list[str]
         chunk = " ".join(words[start:end])
         if chunk.strip():
             chunks.append(chunk)
-            start += chunk_size - overlap
+        start += chunk_size - overlap
     return chunks
 
-def load_pdfs_from_folder(folder_path: str) -> list[str]:
-    #Extract and chunk text from every PDF in a folder
+
+def chunk_pdf_with_metadata(
+    pdf_source, source_file: str, chunk_size: int = 100, overlap: int = 20
+) -> list[dict]:
+    """
+    Extract + chunk a PDF, tagging every chunk with its source filename
+    and the page it came from.
+    Returns a list of {"text": str, "source_file": str, "page_number": int}.
+    """
+    pages = extract_pages_from_pdf(pdf_source)
+    chunks_with_meta = []
+    for page in pages:
+        page_chunks = chunk_text(page["text"], chunk_size=chunk_size, overlap=overlap)
+        for chunk in page_chunks:
+            chunks_with_meta.append({
+                "text": chunk,
+                "source_file": source_file,
+                "page_number": page["page_number"],
+            })
+    return chunks_with_meta
+
+
+def load_pdfs_from_folder(folder_path: str) -> list[dict]:
+    # Extract and chunk text from every PDF in a folder, with metadata
     all_chunks = []
     pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
 
@@ -47,41 +71,33 @@ def load_pdfs_from_folder(folder_path: str) -> list[str]:
 
     for pdf_path in pdf_files:
         print(f"Reading {pdf_path}...")
-        raw_text = extract_text_from_pdf(pdf_path)
-        chunks = chunk_text(raw_text)
+        source_file = os.path.basename(pdf_path)
+        chunks = chunk_pdf_with_metadata(pdf_path, source_file)
         all_chunks.extend(chunks)
         print(f"  -> {len(chunks)} chunks extracted")
 
     embed_and_store(all_chunks)
     return all_chunks
-        
 
-def embed_and_store(texts: list[str]):
-    for text in texts:
-        # Generate vector embedding
-        embedding = model.encode(text).tolist()
-        
-        # Insert into Supabase
+
+def embed_and_store(chunks_with_meta: list[dict]):
+    """
+    chunks_with_meta: list of {"text": str, "source_file": str, "page_number": int}
+    """
+    for item in chunks_with_meta:
+        embedding = model.encode(item["text"]).tolist()
+
         supabase.table("documents").insert({
-            "content": text,
-            "embedding": embedding
+            "content": item["text"],
+            "embedding": embedding,
+            "source_file": item["source_file"],
+            "page_number": item["page_number"],
         }).execute()
-        
-    print(f"Successfully ingested {len(texts)} chunks into Supabase!")
+
+    print(f"Successfully ingested {len(chunks_with_meta)} chunks into Supabase!")
+
 
 if __name__ == "__main__":
-    #Pointing to folder containing PDFs
+    # Pointing to folder containing PDFs
     pdf_folder = "./pdfs"
-
     load_pdfs_from_folder(pdf_folder)
-
-    # Test "Documents"
-    # knowledge_base = [
-    #     "Groq uses Language Processing Units (LPUs) to deliver extremely high-speed LLM inference.",
-    #     "Supabase provides open-source PostgreSQL database services with native pgvector support.",
-    #     "RAG enhances language models by retrieving relevant external data before generating responses."
-    # ]
-    # if knowledge_base:
-    #     embed_and_store(knowledge_base)
-    # else:
-    #     print("No text extracted — nothing to ingest.")
