@@ -33,13 +33,40 @@ def _build_context_str(chunks: list[dict]) -> str:
         for c in chunks
     )
 
+def is_broad_query(query: str) -> bool:
+    """Detects if the query asks for a high-level summary or overview."""
+    broad_keywords = [
+        "summarize",
+        "summary",
+        "about",
+        "overview",
+        "main points",
+        "tl;dr",
+        "what is this",
+    ]
+    query_lower = query.lower()
+    return any(keyword in query_lower for keyword in broad_keywords)
 
-def generate_answer(question: str, chunks: list[dict]):
-    #Yields the answer text token-by-token
+def generate_answer(question: str, chunks: list[dict], session_id: str):
+    # Broad Queries: Summaries
+    if is_broad_query(question):
+        latest_doc = get_latest_summary(session_id)
 
-    context = _build_context_str(chunks)
+        if not latest_doc:
+            return "No document context available for this session."
 
-    system_prompt = f"""You are a helpful assistant. Answer the question using ONLY the provided context.
+        system_prompt = f"""You are a helpful assistant. Use the pre-computed document summary of '{latest_doc['source_file']}' to answer the user's broad question. If you cannot generate a summary reply "Cannot generate a summary try uploading another document."
+
+Document Summary:
+{latest_doc['summary']}"""
+
+    # Specific Queries: document facts
+    else:
+        #Yields the answer text token-by-token
+
+        context = _build_context_str(chunks)
+
+        system_prompt = f"""You are a helpful assistant. Answer the question using ONLY the provided context.
 If the answer isn't in the context, state that it is not in the database.
 
 Context:
@@ -108,6 +135,19 @@ NO_CLAIMS.
         "raw_judge_output": judge_response,
     }
 
+def get_latest_summary(session_id: str) -> dict | None:
+    response = (
+        supabase.table("document_summaries")
+        .select("source_file, summary, created_at")
+        .eq("session_id", session_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+
+    if response.data:
+        return response.data[0]
+    return None
 
 def ask_rag(question: str):
     """
@@ -127,6 +167,39 @@ def ask_rag(question: str):
     if result["faithfulness_score"] is not None:
         print(f"\n[Faithfulness: {result['faithfulness_score']:.0%}]")
 
+def summarize_document(full_text: str, chunk_size: int = 10000) -> str:
+    # Split raw text into large chunks
+    blocks = [
+        full_text[i : i + chunk_size]
+        for i in range(0, len(full_text), chunk_size)
+    ]
+
+    partial_summaries = []
+    for block in blocks[:5]:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Summarize key points from this section:\n\n{block}. Be short and concise with your summaries",
+                }
+            ],
+            temperature=0.2,
+        )
+        partial_summaries.append(response.choices[0].message.content)
+
+    combined = "\n\n".join(partial_summaries)
+    final_response = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=[
+            {
+                "role": "user",
+                "content": f"Synthesize these section summaries into an overall executive summary:\n\n{combined}. Be short and concise. If no summary can be retreived ",
+            }
+        ],
+        temperature=0.3,
+    )
+    return final_response.choices[0].message.content
 
 if __name__ == "__main__":
     user_query = input("Ask a Question: ")

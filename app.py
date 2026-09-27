@@ -2,9 +2,10 @@ import streamlit as st
 import uuid
 
 from main import retrieve_context, generate_answer, score_faithfulness
-from ingest import chunk_pdf_with_metadata, embed_and_store, cleanup_session_data
+from ingest import cleanup_session_data, process_uploaded_files
 
 st.title("🤖 RAG Knowledge Assistant")
+st.caption("AI can make mistakes")
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
@@ -17,7 +18,7 @@ with st.sidebar:
     st.title("Chat Management")
     st.caption("Session: " + st.session_state.session_id)
 
-    if st.button("Clear Chats & Delete Docs"):
+    if st.button("Clear Chat"):
         cleanup_session_data(st.session_state.session_id)
         st.session_state.messages = []
         st.success("Session data deleted from database.")
@@ -52,9 +53,10 @@ if prompt_data:
     if uploaded_files:
         for file in uploaded_files:
             st.info(f"Processing uploaded file: {file.name}")
-            chunks_with_meta = chunk_pdf_with_metadata(file, source_file=file.name)
-            embed_and_store(chunks_with_meta, st.session_state.session_id)
-            st.success(f"Ingested {len(chunks_with_meta)} chunks from {file.name}")
+            process_uploaded_files(file, file.name, st.session_state.session_id)
+            # chunks_with_meta = chunk_pdf_with_metadata(file, source_file=file.name)
+            # embed_and_store(chunks_with_meta, st.session_state.session_id)
+            st.success(f"Ingested {file.name}")
 
     # 2. Process chat prompt if text was provided
     if user_text:
@@ -67,22 +69,23 @@ if prompt_data:
         chunks = retrieve_context(user_text, st.session_state.session_id)
 
         with st.chat_message("assistant"):
-            response = st.write_stream(generate_answer(user_text, chunks))
+            response = st.write_stream(generate_answer(user_text, chunks, st.session_state.session_id))
 
-            with st.expander("Sources"):
-                for c in chunks:
-                    st.markdown(
-                        f"- **{c.get('source_file', 'Unknown')}**, p.{c.get('page_number', 'N/A')} "
-                        f"(similarity: {c['similarity']:.2f})"
-                    )
+            if chunks:
+                with st.expander("Sources"):
+                    for c in chunks:
+                        st.markdown(
+                            f"- **{c.get('source_file', 'Unknown')}**, p.{c.get('page_number', 'N/A')} "
+                            f"(similarity: {c['similarity']:.2f})"
+                        )
 
-            with st.spinner("Scoring faithfulness..."):
-                faithfulness = score_faithfulness(response, chunks)
-            st.caption(f"Faithfulness score: {faithfulness['faithfulness_score']:.0%}")
+                with st.spinner("Scoring faithfulness..."):
+                    faithfulness = score_faithfulness(response, chunks)
+                st.caption(f"Faithfulness score: {faithfulness['faithfulness_score']:.0%}")
 
         st.session_state.messages.append({
             "role": "assistant",
             "content": response,
             "sources": chunks,
-            "faithfulness_score": faithfulness["faithfulness_score"],
+            # "faithfulness_score": faithfulness["faithfulness_score"],
         })

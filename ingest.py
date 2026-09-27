@@ -5,6 +5,8 @@ from sentence_transformers import SentenceTransformer
 from supabase import create_client
 from pypdf import PdfReader
 
+from main import summarize_document
+
 load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -97,10 +99,26 @@ def embed_and_store(chunks_with_meta: list[dict], session_id: str):
 
     print(f"Successfully ingested {len(chunks_with_meta)} chunks into Supabase!")
 
+def process_uploaded_files(file: str, source_file: str, session_id: str):
+    chunks_with_meta = chunk_pdf_with_metadata(file, source_file)
+    embed_and_store(chunks_with_meta, session_id)
+
+    final_summary = summarize_document(chunks_with_meta)
+
+    supabase.table("document_summaries").insert({
+        "session_id": session_id,
+        "source_file": source_file,
+        "summary": final_summary,
+    }).execute()
+
+
 def cleanup_session_data(session_id: str):
     supabase.table("documents").delete().eq(
         "session_id", session_id
     ).execute()
+    supabase.table("document_summaries").delete().eq(
+            "session_id", session_id
+        ).execute()
 
 
 if __name__ == "__main__":
