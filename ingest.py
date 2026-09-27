@@ -80,7 +80,7 @@ def load_pdfs_from_folder(folder_path: str) -> list[dict]:
     return all_chunks
 
 
-def embed_and_store(chunks_with_meta: list[dict]):
+def embed_and_store(chunks_with_meta: list[dict], session_id: str):
     """
     chunks_with_meta: list of {"text": str, "source_file": str, "page_number": int}
     """
@@ -92,9 +92,15 @@ def embed_and_store(chunks_with_meta: list[dict]):
             "embedding": embedding,
             "source_file": item["source_file"],
             "page_number": item["page_number"],
+            "session_id": session_id,
         }).execute()
 
     print(f"Successfully ingested {len(chunks_with_meta)} chunks into Supabase!")
+
+def cleanup_session_data(session_id: str):
+    supabase.table("documents").delete().eq(
+        "session_id", session_id
+    ).execute()
 
 
 if __name__ == "__main__":

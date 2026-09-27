@@ -12,7 +12,7 @@ client = Groq()
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
-def retrieve_context(query: str, match_count: int = 3) -> list[dict]:
+def retrieve_context(query: str, session_id: str, match_count: int = 3) -> list[dict]:
     # 1. Embed user query
     query_vector = embed_model.encode(query).tolist()
 
@@ -20,7 +20,8 @@ def retrieve_context(query: str, match_count: int = 3) -> list[dict]:
     rpc_response = supabase.rpc("match_documents", {
         "query_embedding": query_vector,
         "match_threshold": 0.3,
-        "match_count": match_count
+        "match_count": match_count,
+        "p_session_id": session_id,
     }).execute()
 
     return rpc_response.data
@@ -28,7 +29,7 @@ def retrieve_context(query: str, match_count: int = 3) -> list[dict]:
 
 def _build_context_str(chunks: list[dict]) -> str:
     return "\n\n".join(
-        f"[Source: {c['source_file']}, p.{c['page_number']}]\n{c['content']}"
+        f"[Source: {c.get('source_file', 'Unknown')}, p.{c.get('page_number', 'N/A')}]\n{c.get('content', '')}"
         for c in chunks
     )
 
