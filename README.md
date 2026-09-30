@@ -4,7 +4,7 @@ A Retrieval-Augmented Generation (RAG) chatbot built in Python for the AI Educat
 Users upload documents, the text is chunked and embedded into Supabase, and questions are answered
 by a Groq-hosted LLM using only the retrieved document context.
 
-- **Live app:** https://ai-education-chatbot.streamlit.app/
+- **Live app:** https://senior-design-chatbot.streamlit.app/
 - **Setup, running, and deployment:** see [DEPLOYMENT.md](DEPLOYMENT.md)
 
 This README is the project's documentation and change log. Every meaningful change should be
@@ -54,8 +54,8 @@ Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
 ### 2026-09-23: Deployment URL renamed
 **Author:** Robbie Lee
-- **What:** The Streamlit deployment URL changed from `senior-design-chatbot.streamlit.app` to `ai-education-chatbot.streamlit.app`.
-- **Why:** The app was renamed to match the team/project name.
+- **What:** The Streamlit deployment URL changed from `ai-education-chatbot.streamlit.app` to `senior-design-chatbot.streamlit.app`.
+- **Why:** The Streamlit deployment was renamed. (Note: the `dev` branch still lists the old `ai-education-chatbot` URL.)
 - **How:** Updated the URL in the README (commit `15cccdb`).
 
 ### 2026-09-23: Dev container added, then removed from `main` (PR #8)
