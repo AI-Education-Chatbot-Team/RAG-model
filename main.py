@@ -91,50 +91,6 @@ Context:
         if content:
             yield content
 
-
-def score_faithfulness(answer: str, chunks: list[dict]) -> dict:
-    #Returns a 0-1 faithfulness score
-    context = _build_context_str(chunks)
-
-    judge_prompt = f"""You are evaluating whether an AI-generated answer is
-faithful to its source context (i.e., not hallucinating).
-
-Context:
-{context}
-
-Answer to evaluate:
-{answer}
-
-Break the answer into individual factual claims. For each claim, state
-whether it is:
-- SUPPORTED (directly backed by the context)
-- UNSUPPORTED (not found in the context, possibly hallucinated)
-
-Format each line as: CLAIM: <claim text> | VERDICT: <SUPPORTED/UNSUPPORTED>
-If the answer makes no factual claims (e.g. "I don't know"), respond with
-NO_CLAIMS.
-"""
-
-    judge_response = client.chat.completions.create(
-        model="openai/gpt-oss-20b",
-        messages=[{"role": "user", "content": judge_prompt}],
-        temperature=0,
-        max_completion_tokens=1024,
-    ).choices[0].message.content
-
-    lines = [l for l in judge_response.split("\n") if "VERDICT:" in l]
-    total = len(lines)
-    supported = sum(1 for l in lines if "SUPPORTED" in l and "UNSUPPORTED" not in l)
-
-    faithfulness_score = supported / total if total > 0 else None
-
-    return {
-        "faithfulness_score": faithfulness_score,
-        "total_claims": total,
-        "supported_claims": supported,
-        "raw_judge_output": judge_response,
-    }
-
 def get_latest_summary(session_id: str) -> dict | None:
     response = (
         supabase.table("document_summaries")
@@ -161,11 +117,6 @@ def ask_rag(question: str):
         print(token, end="", flush=True)
         tokens.append(token)
     print()
-
-    full_answer = "".join(tokens)
-    result = score_faithfulness(full_answer, chunks)
-    if result["faithfulness_score"] is not None:
-        print(f"\n[Faithfulness: {result['faithfulness_score']:.0%}]")
 
 def summarize_document(full_text: str, chunk_size: int = 10000) -> str:
     # Split raw text into large chunks

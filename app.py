@@ -1,7 +1,7 @@
 import streamlit as st
 import uuid
 
-from main import retrieve_context, generate_answer, score_faithfulness
+from main import retrieve_context, generate_answer
 from ingest import cleanup_session_data, process_uploaded_files
 
 st.title("🤖 RAG Knowledge Assistant")
@@ -42,7 +42,7 @@ for message in st.session_state.messages:
 prompt_data = st.chat_input(
     "Ask a question or upload a document...",
     accept_file=True,
-    file_type=["pdf"],  # Only PDFs supported for now
+    file_type=["pdf", "txt", "md", "docx", "csv"],
 )
 
 if prompt_data:
@@ -53,7 +53,11 @@ if prompt_data:
     if uploaded_files:
         for file in uploaded_files:
             st.info(f"Processing uploaded file: {file.name}")
-            process_uploaded_files(file, file.name, st.session_state.session_id)
+            try:
+                process_uploaded_files(file, file.name, st.session_state.session_id)
+            except ValueError as e:
+                st.error(str(e))
+                continue
             # chunks_with_meta = chunk_pdf_with_metadata(file, source_file=file.name)
             # embed_and_store(chunks_with_meta, st.session_state.session_id)
             st.success(f"Ingested {file.name}")
@@ -79,13 +83,8 @@ if prompt_data:
                             f"(similarity: {c['similarity']:.2f})"
                         )
 
-                with st.spinner("Scoring faithfulness..."):
-                    faithfulness = score_faithfulness(response, chunks)
-                st.caption(f"Faithfulness score: {faithfulness['faithfulness_score']:.0%}")
-
         st.session_state.messages.append({
             "role": "assistant",
             "content": response,
             "sources": chunks,
-            # "faithfulness_score": faithfulness["faithfulness_score"],
         })
