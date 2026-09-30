@@ -210,4 +210,4 @@ def cleanup_session_data(session_id: str):
 if __name__ == "__main__":
     # Pointing to folder containing PDFs
     pdf_folder = "./pdfs"
-    load_pdfs_from_folder(pdf_folder)
+    load_files_from_folder(pdf_folder)
