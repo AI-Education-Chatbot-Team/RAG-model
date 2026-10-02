@@ -17,13 +17,6 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "last_gc_check" not in st.session_state:
-    st.session_state.last_gc_check = 0
-
-GC_INTERVAL_SECONDS = 60
-if time.time() - st.session_state.last_gc_check > GC_INTERVAL_SECONDS:
-    cleanup_expired_sessions(max_age_minutes=30)
-    st.session_state.last_gc_check = time.time()
 
 with st.sidebar:
     st.title("Chat Management")

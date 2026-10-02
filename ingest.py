@@ -201,22 +201,6 @@ def delete_session_documents(session_id: str) -> int:
     print(f"Deleted {deleted} chunk(s) for session {session_id}.")
     return deleted
 
-
-def cleanup_expired_sessions(max_age_minutes: int = 30) -> int:
-    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)).isoformat()
-
-    response = supabase.table("documents") \
-        .delete() \
-        .not_.is_("session_id", "null") \
-        .lt("created_at", cutoff) \
-        .execute()
-
-    deleted = len(response.data) if response.data else 0
-    if deleted:
-        print(f"Garbage collector removed {deleted} expired chunk(s).")
-    return deleted
-
-
 if __name__ == "__main__":
     source_folder = "./pdfs"
     load_files_from_folder(source_folder)
