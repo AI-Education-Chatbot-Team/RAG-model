@@ -141,31 +141,6 @@ def chunk_file_with_metadata(
     return chunks_with_meta
 
 
-def load_files_from_folder(folder_path: str) -> list[dict]:
-    all_chunks = []
-    files_found = []
-    for ext in SUPPORTED_EXTENSIONS:
-        files_found.extend(glob.glob(os.path.join(folder_path, f"*{ext}")))
-
-    if not files_found:
-        print(f"No supported files found in {folder_path}")
-        return all_chunks
-
-    for file_path in files_found:
-        print(f"Reading {file_path}...")
-        source_file = os.path.basename(file_path)
-        try:
-            chunks = chunk_file_with_metadata(file_path, source_file)
-        except ValueError as e:
-            print(f"  -> Skipped: {e}")
-            continue
-        all_chunks.extend(chunks)
-        print(f"  -> {len(chunks)} chunks extracted")
-
-    embed_and_store(all_chunks, session_id=None)
-    return all_chunks
-
-
 def embed_and_store(chunks_with_meta: list[dict], session_id: str | None = None) -> list[int]:
     inserted_ids = []
     for item in chunks_with_meta:
@@ -200,7 +175,3 @@ def delete_session_documents(session_id: str) -> int:
     deleted = len(response.data) if response.data else 0
     print(f"Deleted {deleted} chunk(s) for session {session_id}.")
     return deleted
-
-if __name__ == "__main__":
-    source_folder = "./pdfs"
-    load_files_from_folder(source_folder)

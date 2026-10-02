@@ -137,21 +137,3 @@ Context:
         content = chunk.choices[0].delta.content
         if content:
             yield content
-
-
-def ask_rag(question: str):
-    if is_summary_request(question):
-        print(f"\nQ: {question}\nA: ", end="")
-        print("Summarization requires a session (use the Streamlit app to upload + summarize a document).")
-        return
-
-    chunks = retrieve_context(question, session_id=None)
-    print(f"\nQ: {question}\nA: ", end="")
-    for token in generate_answer(question, chunks):
-        print(token, end="", flush=True)
-    print()
-
-
-if __name__ == "__main__":
-    user_query = input("Ask a Question: ")
-    ask_rag(user_query)
