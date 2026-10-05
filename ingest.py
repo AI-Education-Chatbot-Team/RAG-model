@@ -1,11 +1,16 @@
 import os
+import tempfile
 import io
 from dotenv import load_dotenv
+
+os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr_models")
+
 from docling.datamodel.base_models import DocumentStream
 from docling.document_converter import DocumentConverter
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from supabase import create_client
+
 
 load_dotenv()
 
