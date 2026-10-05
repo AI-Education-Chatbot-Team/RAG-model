@@ -1,3 +1,8 @@
+import os
+import tempfile
+
+os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr_models")
+
 import uuid
 import streamlit as st
 
