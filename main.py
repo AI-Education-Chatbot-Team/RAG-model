@@ -12,12 +12,12 @@ client = Groq()
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
-def retrieve_context(query: str, session_id: str | None = None, match_count: int = 3) -> list[dict]:
+def retrieve_context(query: str, session_id: str | None = None, match_count: int = 6) -> list[dict]:
     query_vector = embed_model.encode(query).tolist()
 
     rpc_response = supabase.rpc("match_documents", {
         "query_embedding": query_vector,
-        "match_threshold": 0.3,
+        "match_threshold": 0.15,
         "match_count": match_count,
         "filter_session_id": session_id,
     }).execute()

@@ -1,13 +1,11 @@
-import time
 import uuid
 import streamlit as st
 
 from main import retrieve_context, generate_answer, generate_summary, is_summary_request
 from ingest import (
-    chunk_file_with_metadata,
+    extract_and_chunk,
     embed_and_store,
     delete_session_documents,
-    cleanup_expired_sessions,
 )
 
 st.title("🤖 RAG Knowledge Assistant")
@@ -52,13 +50,13 @@ if prompt_data:
     if uploaded_files:
         for file in uploaded_files:
             st.info(f"Processing uploaded file: {file.name}")
-            try:
-                chunks_with_meta = chunk_file_with_metadata(file, source_file=file.name)
-            except ValueError as e:
-                st.error(str(e))
-                continue
-            embed_and_store(chunks_with_meta, session_id=st.session_state.session_id)
-            st.success(f"Ingested {len(chunks_with_meta)} chunks from {file.name}")
+            chunks_with_meta = extract_and_chunk(file)
+
+            if chunks_with_meta:
+                embed_and_store(chunks_with_meta, session_id=st.session_state.session_id)
+                st.success(f"Ingested {len(chunks_with_meta)} chunks from {file.name}")
+            else:
+                st.warning("No extractable text found in file.")
 
     if user_text:
         with st.chat_message("user"):

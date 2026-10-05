@@ -1,7 +1,7 @@
 sentence-transformers
 supabase
 groq
-pypdf
-python-docx
 python-dotenv
 streamlit
+docling
+langchain-text-splitters
