@@ -83,7 +83,7 @@ def generate_summary(session_id: str):
         yield f"I couldn't find any readable content for {source_file}."
         return
 
-    system_prompt = f"""You are a helpful assistant. Provide a clear, concise summary of the following document. Cover the main points and overall purpose. Do not mention that you were given chunks or excerpts — write as if you read the whole document.
+    system_prompt = f"""You are a helpful assistant. Provide a clear, concise summary of the following document. Cover the main points and overall purpose. Do not infer anything outside of the document. Do not mention that you were given chunks or excerpts — write as if you read the whole document.
 
 Document: {source_file}
 

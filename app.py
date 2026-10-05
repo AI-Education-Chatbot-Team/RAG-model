@@ -1,7 +1,13 @@
 import uuid
 import streamlit as st
 
-from main import retrieve_context, generate_answer, generate_summary, is_summary_request
+from main import (
+    retrieve_context, 
+    generate_answer, 
+    generate_summary, 
+    is_summary_request,
+    get_most_recent_source_file
+)
 from ingest import (
     extract_and_chunk,
     embed_and_store,
@@ -26,16 +32,29 @@ with st.sidebar:
         st.session_state.session_id = str(uuid.uuid4())
         st.rerun()
 
+def render_sources(sources_list):
+    if not sources_list:
+        return
+    with st.expander("Sources"):
+        for s in sources_list:
+            if s.get("type") == "Full Document Summary":
+                st.markdown(
+                    f"- **{s.get('source_file', 'Unknown')}** "
+                    f"(type: Full Document Summary)"
+                )
+            else:
+                sim = s.get("similarity")
+                sim_str = f"{sim:.2f}" if sim is not None else "1.00"
+                st.markdown(
+                    f"- **{s.get('source_file', 'Unknown')}**, p.{s.get('page_number', 'N/A')} "
+                    f"(similarity: {sim_str})"
+                )
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message.get("sources"):
-            with st.expander("Sources"):
-                for s in message["sources"]:
-                    st.markdown(
-                        f"- **{s.get('source_file', 'Unknown')}**, p.{s.get('page_number', 'N/A')} "
-                        f"(similarity: {s['similarity']:.2f})"
-                    )
+            render_sources(message["sources"])
 
 prompt_data = st.chat_input(
     "Ask a question or upload a document...",
@@ -67,25 +86,28 @@ if prompt_data:
 
         with st.chat_message("assistant"):
             if is_summary:
+                source_file = get_most_recent_source_file(st.session_state.session_id)
                 response = st.write_stream(generate_summary(st.session_state.session_id))
-                chunks = []
+
+                sources_to_save = (
+                    [{"source_file": source_file, "type": "Full Document Summary"}]
+                    if source_file
+                    else []
+                )
             else:
                 chunks = retrieve_context(user_text, session_id=st.session_state.session_id)
                 if not chunks:
                     chunks = retrieve_context(user_text, session_id=None)
 
                 response = st.write_stream(generate_answer(user_text, chunks))
+                sources_to_save = chunks
 
-                if chunks:
-                    with st.expander("Sources"):
-                        for c in chunks:
-                            st.markdown(
-                                f"- **{c.get('source_file', 'Unknown')}**, p.{c.get('page_number', 'N/A')} "
-                                f"(similarity: {c['similarity']:.2f})"
-                            )
-
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response,
-            "sources": chunks if not is_summary else None,
-        })
+            render_sources(sources_to_save)
+        
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response,
+                    "sources": sources_to_save,
+                }
+            )
