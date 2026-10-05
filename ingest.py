@@ -5,7 +5,7 @@ os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr
 
 import io
 from dotenv import load_dotenv
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
 from docling.datamodel.base_models import DocumentStream
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -14,6 +14,8 @@ from supabase import create_client
 
 pipeline_options = PdfPipelineOptions()
 pipeline_options.do_ocr = False
+
+pipeline_options.ocr_options = RapidOcrOptions(force_full_page_ocr=False)
 
 load_dotenv()
 
