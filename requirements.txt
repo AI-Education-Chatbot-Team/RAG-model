@@ -5,3 +5,4 @@ python-dotenv
 streamlit
 docling
 langchain-text-splitters
+opencv-python-headless
