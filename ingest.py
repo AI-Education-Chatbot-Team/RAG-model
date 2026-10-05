@@ -3,6 +3,7 @@ import tempfile
 import io
 from dotenv import load_dotenv
 from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.base_models import DocumentStream
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
