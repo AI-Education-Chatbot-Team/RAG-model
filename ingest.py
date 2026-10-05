@@ -1,5 +1,8 @@
 import os
 import tempfile
+
+os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr_models")
+
 import io
 from dotenv import load_dotenv
 from docling.datamodel.pipeline_options import PdfPipelineOptions
