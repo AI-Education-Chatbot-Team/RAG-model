@@ -2,15 +2,14 @@ import os
 import tempfile
 import io
 from dotenv import load_dotenv
-
-os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr_models")
-
-from docling.datamodel.base_models import DocumentStream
-from docling.document_converter import DocumentConverter
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from supabase import create_client
 
+pipeline_options = PdfPipelineOptions()
+pipeline_options.do_ocr = False
 
 load_dotenv()
 
@@ -20,7 +19,11 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-doc_converter = DocumentConverter()
+doc_converter = DocumentConverter(
+    format_options={
+        PdfFormatOption: PdfFormatOption(pipeline_options=pipeline_options)
+    }
+)
 
 SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md", ".docx", ".csv"]
 
