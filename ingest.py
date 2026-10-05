@@ -1,9 +1,11 @@
 import os
-import glob
+import io
 from dotenv import load_dotenv
+from docling.datamodel.base_models import DocumentStream
+from docling.document_converter import DocumentConverter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from supabase import create_client
-from pypdf import PdfReader
 
 load_dotenv()
 
@@ -13,20 +15,40 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
+doc_converter = DocumentConverter()
 
-def extract_pages_from_pdf(pdf_source) -> list[dict]:
-    #Extract all text from PDF
-    reader = PdfReader(pdf_source)
-    pages = []
-    for i, page in enumerate(reader.pages, start=1):
-        page_text = page.extract_text()
-        if page_text:
-            pages.append({"page_number": i, "text": page_text})
-    return pages
+SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md", ".docx", ".csv"]
 
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=150,
+    separators=["\n\n", "\n", "#", ". ", " ", ""]
+)
 
-def chunk_text(text: str, chunk_size: int = 100, overlap: int = 20) -> list[str]:
-    # Split text into word based chunks
+def extract_and_chunk(uploaded_file: str) -> list[dict]:
+    buf = io.BytesIO(uploaded_file.getvalue())
+    doc_stream = DocumentStream(name=uploaded_file.name, filename=uploaded_file.name, stream=buf)
+    
+    
+    result = doc_converter.convert(doc_stream)
+    markdown_text = result.document.export_to_markdown()
+
+    if not markdown_text.strip():
+        return []
+
+    
+    raw_chunks = text_splitter.split_text(markdown_text)
+    
+    return [
+        {
+            "text": chunk,
+            "source_file": uploaded_file.name,
+            "page_number": 1,
+        }
+        for chunk in raw_chunks
+    ]
+
+def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
     words = text.split()
     chunks = []
     start = 0
@@ -38,66 +60,37 @@ def chunk_text(text: str, chunk_size: int = 100, overlap: int = 20) -> list[str]
         start += chunk_size - overlap
     return chunks
 
-
-def chunk_pdf_with_metadata(
-    pdf_source, source_file: str, chunk_size: int = 100, overlap: int = 20
-) -> list[dict]:
-    """
-    Extract + chunk a PDF, tagging every chunk with its source filename
-    and the page it came from.
-    Returns a list of {"text": str, "source_file": str, "page_number": int}.
-    """
-    pages = extract_pages_from_pdf(pdf_source)
-    chunks_with_meta = []
-    for page in pages:
-        page_chunks = chunk_text(page["text"], chunk_size=chunk_size, overlap=overlap)
-        for chunk in page_chunks:
-            chunks_with_meta.append({
-                "text": chunk,
-                "source_file": source_file,
-                "page_number": page["page_number"],
-            })
-    return chunks_with_meta
-
-
-def load_pdfs_from_folder(folder_path: str) -> list[dict]:
-    # Extract and chunk text from every PDF in a folder, with metadata
-    all_chunks = []
-    pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
-
-    if not pdf_files:
-        print(f"No PDF files found in {folder_path}")
-        return all_chunks
-
-    for pdf_path in pdf_files:
-        print(f"Reading {pdf_path}...")
-        source_file = os.path.basename(pdf_path)
-        chunks = chunk_pdf_with_metadata(pdf_path, source_file)
-        all_chunks.extend(chunks)
-        print(f"  -> {len(chunks)} chunks extracted")
-
-    embed_and_store(all_chunks)
-    return all_chunks
-
-
-def embed_and_store(chunks_with_meta: list[dict]):
-    """
-    chunks_with_meta: list of {"text": str, "source_file": str, "page_number": int}
-    """
+def embed_and_store(chunks_with_meta: list[dict], session_id: str | None = None) -> list[int]:
+    inserted_ids = []
     for item in chunks_with_meta:
         embedding = model.encode(item["text"]).tolist()
 
-        supabase.table("documents").insert({
+        response = supabase.table("documents").insert({
             "content": item["text"],
             "embedding": embedding,
             "source_file": item["source_file"],
             "page_number": item["page_number"],
+            "session_id": session_id,
         }).execute()
 
+        if response.data:
+            inserted_ids.append(response.data[0]["id"])
+
     print(f"Successfully ingested {len(chunks_with_meta)} chunks into Supabase!")
+    return inserted_ids
 
 
-if __name__ == "__main__":
-    # Pointing to folder containing PDFs
-    pdf_folder = "./pdfs"
-    load_pdfs_from_folder(pdf_folder)
+def delete_documents(ids: list[int]) -> None:
+    if not ids:
+        return
+    supabase.table("documents").delete().in_("id", ids).execute()
+    print(f"Deleted {len(ids)} chunk(s) by ID.")
+
+
+def delete_session_documents(session_id: str) -> int:
+    if not session_id:
+        return 0
+    response = supabase.table("documents").delete().eq("session_id", session_id).execute()
+    deleted = len(response.data) if response.data else 0
+    print(f"Deleted {deleted} chunk(s) for session {session_id}.")
+    return deleted

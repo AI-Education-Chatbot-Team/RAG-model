@@ -12,15 +12,14 @@ client = Groq()
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
-def retrieve_context(query: str, match_count: int = 3) -> list[dict]:
-    # 1. Embed user query
+def retrieve_context(query: str, session_id: str | None = None, match_count: int = 6) -> list[dict]:
     query_vector = embed_model.encode(query).tolist()
 
-    # 2. Match documents in Supabase
     rpc_response = supabase.rpc("match_documents", {
         "query_embedding": query_vector,
-        "match_threshold": 0.3,
-        "match_count": match_count
+        "match_threshold": 0.15,
+        "match_count": match_count,
+        "filter_session_id": session_id,
     }).execute()
 
     return rpc_response.data
@@ -28,14 +27,90 @@ def retrieve_context(query: str, match_count: int = 3) -> list[dict]:
 
 def _build_context_str(chunks: list[dict]) -> str:
     return "\n\n".join(
-        f"[Source: {c['source_file']}, p.{c['page_number']}]\n{c['content']}"
+        f"[Source: {c.get('source_file', 'Unknown')}, p.{c.get('page_number', 'N/A')}]\n{c.get('content', '')}"
         for c in chunks
     )
 
 
-def generate_answer(question: str, chunks: list[dict]):
-    #Yields the answer text token-by-token
+BROAD_QUERY_KEYWORDS = [
+    "summarize", "summary", "overview", "main points",
+    "tl;dr", "tldr", "what is this document about",
+    "what's this document about", "what is this about",
+]
 
+
+def is_summary_request(query: str) -> bool:
+    q = query.lower()
+    return any(keyword in q for keyword in BROAD_QUERY_KEYWORDS)
+
+
+def get_most_recent_source_file(session_id: str) -> str | None:
+    response = supabase.table("documents") \
+        .select("source_file") \
+        .eq("session_id", session_id) \
+        .order("id", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if response.data:
+        return response.data[0]["source_file"]
+    return None
+
+
+def get_full_document_text(session_id: str, source_file: str) -> str:
+    response = supabase.table("documents") \
+        .select("content, page_number, id") \
+        .eq("session_id", session_id) \
+        .eq("source_file", source_file) \
+        .order("page_number") \
+        .order("id") \
+        .execute()
+
+    rows = response.data or []
+    return "\n".join(r["content"] for r in rows)
+
+
+def generate_summary(session_id: str):
+    source_file = get_most_recent_source_file(session_id)
+
+    if not source_file:
+        yield "You haven't uploaded a document in this session yet — upload one first, then ask me to summarize it."
+        return
+
+    full_text = get_full_document_text(session_id, source_file)
+
+    if not full_text.strip():
+        yield f"I couldn't find any readable content for {source_file}."
+        return
+
+    system_prompt = f"""You are a helpful assistant. Provide a clear, concise summary of the following document. Cover the main points and overall purpose. Do not infer anything outside of the document. Do not mention that you were given chunks or excerpts — write as if you read the whole document.
+
+Document: {source_file}
+
+Content:
+{full_text}"""
+
+    completion = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Please summarize this document."}
+        ],
+        temperature=0.3,
+        max_completion_tokens=2048,
+        top_p=1,
+        reasoning_effort="medium",
+        stream=True,
+        stop=None,
+    )
+
+    for chunk in completion:
+        content = chunk.choices[0].delta.content
+        if content:
+            yield content
+
+
+def generate_answer(question: str, chunks: list[dict]):
     context = _build_context_str(chunks)
 
     system_prompt = f"""You are a helpful assistant. Answer the question using ONLY the provided context.
@@ -55,78 +130,10 @@ Context:
         top_p=1,
         reasoning_effort="medium",
         stream=True,
-        stop=None
+        stop=None,
     )
 
     for chunk in completion:
         content = chunk.choices[0].delta.content
         if content:
             yield content
-
-
-def score_faithfulness(answer: str, chunks: list[dict]) -> dict:
-    #Returns a 0-1 faithfulness score
-    context = _build_context_str(chunks)
-
-    judge_prompt = f"""You are evaluating whether an AI-generated answer is
-faithful to its source context (i.e., not hallucinating).
-
-Context:
-{context}
-
-Answer to evaluate:
-{answer}
-
-Break the answer into individual factual claims. For each claim, state
-whether it is:
-- SUPPORTED (directly backed by the context)
-- UNSUPPORTED (not found in the context, possibly hallucinated)
-
-Format each line as: CLAIM: <claim text> | VERDICT: <SUPPORTED/UNSUPPORTED>
-If the answer makes no factual claims (e.g. "I don't know"), respond with
-NO_CLAIMS.
-"""
-
-    judge_response = client.chat.completions.create(
-        model="openai/gpt-oss-20b",
-        messages=[{"role": "user", "content": judge_prompt}],
-        temperature=0,
-        max_completion_tokens=1024,
-    ).choices[0].message.content
-
-    lines = [l for l in judge_response.split("\n") if "VERDICT:" in l]
-    total = len(lines)
-    supported = sum(1 for l in lines if "SUPPORTED" in l and "UNSUPPORTED" not in l)
-
-    faithfulness_score = supported / total if total > 0 else None
-
-    return {
-        "faithfulness_score": faithfulness_score,
-        "total_claims": total,
-        "supported_claims": supported,
-        "raw_judge_output": judge_response,
-    }
-
-
-def ask_rag(question: str):
-    """
-    CLI convenience wrapper: retrieve, generate, print. Kept for
-    `python3 main.py` terminal usage.
-    """
-    chunks = retrieve_context(question)
-    print(f"\nQ: {question}\nA: ", end="")
-    tokens = []
-    for token in generate_answer(question, chunks):
-        print(token, end="", flush=True)
-        tokens.append(token)
-    print()
-
-    full_answer = "".join(tokens)
-    result = score_faithfulness(full_answer, chunks)
-    if result["faithfulness_score"] is not None:
-        print(f"\n[Faithfulness: {result['faithfulness_score']:.0%}]")
-
-
-if __name__ == "__main__":
-    user_query = input("Ask a Question: ")
-    ask_rag(user_query)
