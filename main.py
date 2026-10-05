@@ -12,12 +12,12 @@ client = Groq()
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
-def retrieve_context(query: str, session_id: str | None = None, match_count: int = 3) -> list[dict]:
+def retrieve_context(query: str, session_id: str | None = None, match_count: int = 6) -> list[dict]:
     query_vector = embed_model.encode(query).tolist()
 
     rpc_response = supabase.rpc("match_documents", {
         "query_embedding": query_vector,
-        "match_threshold": 0.3,
+        "match_threshold": 0.15,
         "match_count": match_count,
         "filter_session_id": session_id,
     }).execute()
@@ -83,7 +83,7 @@ def generate_summary(session_id: str):
         yield f"I couldn't find any readable content for {source_file}."
         return
 
-    system_prompt = f"""You are a helpful assistant. Provide a clear, concise summary of the following document. Cover the main points and overall purpose. Do not mention that you were given chunks or excerpts — write as if you read the whole document.
+    system_prompt = f"""You are a helpful assistant. Provide a clear, concise summary of the following document. Cover the main points and overall purpose. Do not infer anything outside of the document. Do not mention that you were given chunks or excerpts — write as if you read the whole document.
 
 Document: {source_file}
 
@@ -137,21 +137,3 @@ Context:
         content = chunk.choices[0].delta.content
         if content:
             yield content
-
-
-def ask_rag(question: str):
-    if is_summary_request(question):
-        print(f"\nQ: {question}\nA: ", end="")
-        print("Summarization requires a session (use the Streamlit app to upload + summarize a document).")
-        return
-
-    chunks = retrieve_context(question, session_id=None)
-    print(f"\nQ: {question}\nA: ", end="")
-    for token in generate_answer(question, chunks):
-        print(token, end="", flush=True)
-    print()
-
-
-if __name__ == "__main__":
-    user_query = input("Ask a Question: ")
-    ask_rag(user_query)
