@@ -1,0 +1,43 @@
+name: Streamlit CI
+
+# Runs on every pull request into main (and pushes to main) so broken code is
+# caught before it is merged. Can also be started by hand from the Actions tab.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Same system packages Streamlit Cloud installs from packages.txt
+      - name: Install system packages
+        run: sudo apt-get update && xargs sudo apt-get install -y < packages.txt
+
+      # CPU-only torch keeps the install small; GitHub runners have no GPU
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt pytest
+
+      - name: Check Python files compile
+        run: python -m py_compile app.py main.py ingest.py
+
+      # Tests fake Supabase, Groq, and the ML models, so no secrets are needed
+      - name: Run tests
+        run: pytest -v
