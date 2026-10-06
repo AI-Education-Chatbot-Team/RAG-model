@@ -28,11 +28,12 @@ jobs:
       - name: Install system packages
         run: sudo apt-get update && xargs sudo apt-get install -y < packages.txt
 
-      # CPU-only torch keeps the install small; GitHub runners have no GPU
+      # CPU-only torch keeps the install small; GitHub runners have no GPU.
+      # torchvision must come from the same index or it won't match torch.
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt pytest
 
       - name: Check Python files compile
