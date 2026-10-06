@@ -74,13 +74,30 @@ if prompt_data:
     if uploaded_files:
         for file in uploaded_files:
             st.info(f"Processing uploaded file: {file.name}")
-            chunks_with_meta = extract_and_chunk(file)
 
-            if chunks_with_meta:
-                embed_and_store(chunks_with_meta, session_id=st.session_state.session_id)
-                st.success(f"Ingested {len(chunks_with_meta)} chunks from {file.name}")
-            else:
-                st.warning("No extractable text found in file.")
+            # 1. Save uploaded file buffer to a temporary file in /tmp
+            file_ext = os.path.splitext(file.name)[1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+                tmp_file.write(file.getbuffer())
+                temp_path = tmp_file.name
+
+            try:
+                # 2. Pass the local file path from /tmp to ingest.py
+                chunks_with_meta = extract_and_chunk(
+                    file_path=temp_path, 
+                    source_file_name=file.name
+                )
+
+                if chunks_with_meta:
+                    embed_and_store(chunks_with_meta, session_id=st.session_state.session_id)
+                    st.success(f"Ingested {len(chunks_with_meta)} chunks from {file.name}")
+                else:
+                    st.warning("No extractable text found in file.")
+
+            finally:
+                # 3. Clean up the temporary file from /tmp
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
 
     if user_text:
         with st.chat_message("user"):

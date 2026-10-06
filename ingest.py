@@ -5,17 +5,10 @@ os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr
 
 import io
 from dotenv import load_dotenv
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractOcrOptions
-from docling.datamodel.base_models import DocumentStream
-from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.document_converter import DocumentConverter
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from supabase import create_client
-
-pipeline_options = PdfPipelineOptions()
-pipeline_options.do_ocr = False
-
-pipeline_options.ocr_options = TesseractOcrOptions()
 
 load_dotenv()
 
@@ -25,11 +18,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-doc_converter = DocumentConverter(
-    format_options={
-        PdfFormatOption: PdfFormatOption(pipeline_options=pipeline_options)
-    }
-)
+doc_converter = DocumentConverter()
 
 SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md", ".docx", ".csv"]
 
@@ -39,24 +28,24 @@ text_splitter = RecursiveCharacterTextSplitter(
     separators=["\n\n", "\n", "#", ". ", " ", ""]
 )
 
-def extract_and_chunk(uploaded_file: str) -> list[dict]:
-    buf = io.BytesIO(uploaded_file.getvalue())
-    doc_stream = DocumentStream(name=uploaded_file.name, filename=uploaded_file.name, stream=buf)
+def extract_and_chunk(file_path: str, source_file_name: str) -> list[dict]:
     
-    
-    result = doc_converter.convert(doc_stream)
+    result = doc_converter.convert(file_path)
     markdown_text = result.document.export_to_markdown()
 
     if not markdown_text.strip():
         return []
 
     
+    if not markdown_text.strip():
+        return []
+
     raw_chunks = text_splitter.split_text(markdown_text)
-    
+
     return [
         {
             "text": chunk,
-            "source_file": uploaded_file.name,
+            "source_file": source_file_name,
             "page_number": 1,
         }
         for chunk in raw_chunks
