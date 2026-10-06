@@ -1,8 +1,5 @@
 import os
 import tempfile
-
-os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr_models")
-
 import uuid
 import streamlit as st
 
@@ -51,7 +48,7 @@ def render_sources(sources_list):
                 sim = s.get("similarity")
                 sim_str = f"{sim:.2f}" if sim is not None else "1.00"
                 st.markdown(
-                    f"- **{s.get('source_file', 'Unknown')}**, p.{s.get('page_number', 'N/A')} "
+                    f"- **{s.get('source_file', 'Unknown')}"
                     f"(similarity: {sim_str})"
                 )
 
@@ -64,7 +61,7 @@ for message in st.session_state.messages:
 prompt_data = st.chat_input(
     "Ask a question or upload a document...",
     accept_file=True,
-    file_type=["pdf", "txt", "md", "docx", "csv"],
+    file_type=["pdf", "docx", "pptx", "txt", "md", "csv", "xlsx"],
 )
 
 if prompt_data:
