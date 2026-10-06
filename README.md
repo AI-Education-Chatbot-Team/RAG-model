@@ -125,8 +125,6 @@ Open PRs that are not yet merged into `main`. Move each one into the Change Log 
 
 | PR | Branch | Issues | Summary |
 |----|--------|--------|---------|
-| #15 | `session_memory` → `dev` | #9, #14 | Per-user session IDs for uploaded documents. Documents are cleared on "Clear chat" or after 30 minutes. Supports summary-style questions ("What is this document about?") against the most recently uploaded document. |
-| #16 | `dev` → `main` | #11, #12 | Upload support for PDF, TXT, MD, DOCX, and CSV. Removes the faithfulness score. (`.pptx` support and docling-based parsing from #11 are not included.) |
 
 ## Open Issues
 
