@@ -6,6 +6,7 @@ as they are imported. These patches start BEFORE those modules are imported so
 the tests run offline, with no API keys, and without downloading any models.
 """
 import os
+import pkgutil
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -16,12 +17,16 @@ os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_KEY", "test-key")
 os.environ.setdefault("GROQ_API_KEY", "test-key")
 
+# The real classes are kept here for the opt-in integration tests
+REAL = {}
 for target in (
     "supabase.create_client",
     "groq.Groq",
     "sentence_transformers.SentenceTransformer",
     "docling.document_converter.DocumentConverter",
 ):
+    module, attr = target.rsplit(".", 1)
+    REAL[target] = pkgutil.resolve_name(f"{module}:{attr}")
     patch(target, MagicMock()).start()
 
 import ingest  # noqa: E402

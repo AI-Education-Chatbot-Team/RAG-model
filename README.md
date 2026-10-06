@@ -52,7 +52,7 @@ Newest first. Dates are the merge date for PRs or the commit date on `main`.
 **Author:** Rett Wilson
 - **What:** Every pull request into `main` now runs a GitHub Actions pipeline that installs the dependencies, checks the Python files compile, and runs automated tests. Results show as a check on the PR.
 - **Why:** Broken code and dependency problems were only found after merging and deploying (see Issue #28). The pipeline catches them before the merge.
-- **How:** Added `.github/workflows/streamlit-ci.yml`, `pytest.ini`, and `tests/`. The tests cover `main.py`, `ingest.py`, and the app itself using Streamlit's `AppTest`. `tests/conftest.py` replaces Supabase, Groq, SentenceTransformer, and docling with fakes so tests run offline without secrets.
+- **How:** Added `.github/workflows/streamlit-ci.yml`, `pytest.ini`, and `tests/`. The tests cover `main.py`, `ingest.py`, and the app itself using Streamlit's `AppTest`. `tests/conftest.py` replaces Supabase, Groq, SentenceTransformer, and docling with fakes so tests run offline without secrets. `tests/test_app_flows.py` covers uploads, summaries, and session search. `tests/test_integration.py` (`pytest -m integration`) runs the real docling parser and embedding model on real PDF, DOCX, TXT, MD, and CSV files. Three known bugs are recorded as `xfail` tests: unreadable uploads crash the app, every chunk is stored as page 1, and RapidOCR writes models into site-packages (Issue #28).
 
 ### 2026-09-30: Documentation restructure (Issue #13)
 **Author:** Rett Wilson
