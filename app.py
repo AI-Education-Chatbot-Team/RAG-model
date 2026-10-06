@@ -83,10 +83,7 @@ if prompt_data:
 
             try:
                 # 2. Pass the local file path from /tmp to ingest.py
-                chunks_with_meta = extract_and_chunk(
-                    file_path=temp_path, 
-                    source_file_name=file.name
-                )
+                chunks_with_meta = extract_and_chunk(temp_path, file.name)
 
                 if chunks_with_meta:
                     embed_and_store(chunks_with_meta, session_id=st.session_state.session_id)
