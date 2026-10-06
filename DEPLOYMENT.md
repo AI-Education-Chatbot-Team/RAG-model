@@ -30,3 +30,11 @@ To run chatbot in terminal run:<br>
 To run localhost run:<br>
 `streamlit run app.py`
 
+## Running Tests
+Install pytest:<br>
+`pip install pytest`
+
+Run all tests from the repo root:<br>
+`pytest`
+
+The same tests run automatically on every pull request into `main` (see `.github/workflows/streamlit-ci.yml`).
