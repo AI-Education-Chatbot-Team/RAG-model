@@ -46,6 +46,18 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
+### 2026-10-06: Fix Permission Issue with Streamlit Cloud
+**Author:** Robbie Lee
+- **What:** Moved from Docling to MarkItDown because Docling was causing a permission error trying to write to streamlit cloud.
+- **Why:** Docling was trying to create models and documents in streamlit cloud, however, the streamlit cloud container is write only.
+- **How:** To get around Streamlit's write only, we moved to MarkItDown. Using this streamlit does not throw a permissions error and parses many more document types to markdown.
+
+### 2026-10-05: Refactor Ingestion
+**Author:** Robbie Lee
+- **What:** Updated file ingestion to use Docling for better parsing and LLM reading. Also refactored much of the code base removing unused functions
+- **Why:** Before our file parsing was grabbing raw text which resulted in a lot of data loss.
+- **How:** Imported docling and used built in converter to convert file types to markdown.
+
 ### 2026-09-30: Documentation restructure (Issue #13)
 **Author:** Rett Wilson
 - **What:** Renamed the old `README.md` to `DEPLOYMENT.md` and created this README as the project's documentation and change log.
