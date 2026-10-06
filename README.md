@@ -20,6 +20,8 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 | `main.py` | Embeds the user's question, retrieves the closest chunks via the Supabase `match_documents` RPC, and streams an answer from Groq (`openai/gpt-oss-20b`) grounded only in that context. Also runs from the terminal (`python3 main.py`). |
 | `app.py` | Streamlit web UI: chat input with file upload, streamed answers, and a "Sources" list for each answer. |
 | `pdfs/` | Sample documents for bulk ingestion with `python3 ingest.py`. |
+| `tests/` | Automated `pytest` tests for `main.py`, `ingest.py`, and the Streamlit app. Supabase, Groq, and the ML models are faked, so no API keys are needed. |
+| `.github/workflows/streamlit-ci.yml` | CI pipeline: installs dependencies and runs the tests on every pull request into `main`. |
 
 ---
 
@@ -45,6 +47,12 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 ## Change Log
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
+
+### 2026-10-06: Streamlit CI pipeline and automated tests (Issue #10)
+**Author:** Rett Wilson
+- **What:** Every pull request into `main` now runs a GitHub Actions pipeline that installs the dependencies, checks the Python files compile, and runs automated tests. Results show as a check on the PR.
+- **Why:** Broken code and dependency problems were only found after merging and deploying (see Issue #28). The pipeline catches them before the merge.
+- **How:** Added `.github/workflows/streamlit-ci.yml`, `pytest.ini`, and `tests/`. The tests cover `main.py`, `ingest.py`, and the app itself using Streamlit's `AppTest`. `tests/conftest.py` replaces Supabase, Groq, SentenceTransformer, and docling with fakes so tests run offline without secrets. `tests/test_app_flows.py` covers uploads, summaries, and session search. `tests/test_integration.py` (`pytest -m integration`) runs the real docling parser and embedding model on real PDF, DOCX, TXT, MD, and CSV files. Three known bugs are recorded as `xfail` tests: unreadable uploads crash the app, every chunk is stored as page 1, and RapidOCR writes models into site-packages (Issue #28).
 
 ### 2026-09-30: Documentation restructure (Issue #13)
 **Author:** Rett Wilson
@@ -118,4 +126,4 @@ Open PRs that are not yet merged into `main`. Move each one into the Change Log 
 
 ## Open Issues
 
-- **#10:** Set up a CI/CD pipeline that tests Streamlit code before merging into `main`.
+- **#28:** Live website has permission issues when deployed.
