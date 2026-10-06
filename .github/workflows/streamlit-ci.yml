@@ -34,7 +34,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install -r requirements.txt pytest
+          pip install -r requirements.txt pytest reportlab python-docx
 
       - name: Check Python files compile
         run: python -m py_compile app.py main.py ingest.py
@@ -42,3 +42,7 @@ jobs:
       # Tests fake Supabase, Groq, and the ML models, so no secrets are needed
       - name: Run tests
         run: pytest -v
+
+      # Real docling + embedding model on real PDF/DOCX/TXT/MD/CSV files
+      - name: Run integration tests
+        run: pytest -v -m integration
