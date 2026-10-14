@@ -20,6 +20,8 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 | `main.py` | Embeds the user's question, retrieves the closest chunks via the Supabase `match_documents` RPC, and streams an answer from Groq (`openai/gpt-oss-20b`) grounded only in that context. Also runs from the terminal (`python3 main.py`). |
 | `app.py` | Streamlit web UI: chat input with file upload, streamed answers, and a "Sources" list for each answer. |
 | `pdfs/` | Sample documents for bulk ingestion with `python3 ingest.py`. |
+| `tests/` | Automated `pytest` tests for `main.py`, `ingest.py`, and the Streamlit app. Supabase, Groq, and the ML models are faked, so no API keys are needed. |
+| `.github/workflows/streamlit-ci.yml` | CI pipeline: installs dependencies and runs the tests on every pull request into `main`. |
 
 ---
 
@@ -128,4 +130,4 @@ Open PRs that are not yet merged into `main`. Move each one into the Change Log 
 
 ## Open Issues
 
-- **#10:** Set up a CI/CD pipeline that tests Streamlit code before merging into `main`.
+- **#28:** Live website has permission issues when deployed.
