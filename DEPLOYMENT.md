@@ -37,7 +37,7 @@ Install pytest:<br>
 Run the fast tests from the repo root:<br>
 `pytest`
 
-Run the slower integration tests, which use the real docling parser and embedding model on real files (needs `pip install reportlab python-docx`):<br>
+Run the slower integration tests, which use the real MarkItDown parser and embedding model on real files (needs `pip install reportlab python-docx`):<br>
 `pytest -m integration`
 
 Tests marked `xfail` are known bugs. When a bug is fixed, its test reports `XPASS` and fails; remove the `xfail` marker from that test.

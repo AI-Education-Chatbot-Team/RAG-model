@@ -23,7 +23,7 @@ for target in (
     "supabase.create_client",
     "groq.Groq",
     "sentence_transformers.SentenceTransformer",
-    "docling.document_converter.DocumentConverter",
+    "markitdown.MarkItDown",
 ):
     module, attr = target.rsplit(".", 1)
     REAL[target] = pkgutil.resolve_name(f"{module}:{attr}")
@@ -72,7 +72,7 @@ def fake_embedder(monkeypatch):
 @pytest.fixture
 def fake_converter(monkeypatch):
     converter = MagicMock()
-    monkeypatch.setattr(ingest, "doc_converter", converter)
+    monkeypatch.setattr(ingest, "md", converter)
     return converter
 
 

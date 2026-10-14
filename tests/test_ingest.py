@@ -16,7 +16,7 @@ def test_chunk_text_empty_input():
 
 
 def test_extract_and_chunk_tags_source_file(fakes):
-    fakes.converter.convert.return_value.document.export_to_markdown.return_value = (
+    fakes.converter.convert.return_value.text_content = (
         "# Title\n\nSome document text."
     )
 
@@ -28,7 +28,7 @@ def test_extract_and_chunk_tags_source_file(fakes):
 
 
 def test_extract_and_chunk_empty_document(fakes):
-    fakes.converter.convert.return_value.document.export_to_markdown.return_value = "   "
+    fakes.converter.convert.return_value.text_content = "   "
 
     assert ingest.extract_and_chunk("/tmp/empty.pdf", "empty.pdf") == []
 

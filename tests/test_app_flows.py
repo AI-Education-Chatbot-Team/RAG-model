@@ -35,7 +35,7 @@ def submit(monkeypatch):
 
 
 def test_upload_ingests_file_into_session(fakes, submit):
-    fakes.converter.convert.return_value.document.export_to_markdown.return_value = "Notes text"
+    fakes.converter.convert.return_value.text_content = "Notes text"
     fakes.supabase.table.return_value.insert.return_value.execute.return_value.data = [{"id": 1}]
 
     at = submit(files=[FakeUpload("notes.pdf")])
@@ -54,8 +54,7 @@ def test_upload_passes_a_real_temp_file_with_extension(fakes, submit):
         with open(path, "rb") as f:
             seen["data"] = f.read()
         seen["path"] = path
-        result = SimpleNamespace(document=SimpleNamespace(export_to_markdown=lambda: "x"))
-        return result
+        return SimpleNamespace(text_content="x")
 
     fakes.converter.convert.side_effect = fake_convert
 
@@ -67,9 +66,7 @@ def test_upload_passes_a_real_temp_file_with_extension(fakes, submit):
 
 def test_upload_removes_temp_file_afterwards(fakes, submit):
     paths = []
-    fakes.converter.convert.side_effect = lambda p: paths.append(p) or SimpleNamespace(
-        document=SimpleNamespace(export_to_markdown=lambda: "x")
-    )
+    fakes.converter.convert.side_effect = lambda p: paths.append(p) or SimpleNamespace(text_content="x")
 
     submit(files=[FakeUpload("a.txt")])
 
@@ -77,7 +74,7 @@ def test_upload_removes_temp_file_afterwards(fakes, submit):
 
 
 def test_upload_with_no_text_shows_warning(fakes, submit):
-    fakes.converter.convert.return_value.document.export_to_markdown.return_value = "  "
+    fakes.converter.convert.return_value.text_content = "  "
 
     at = submit(files=[FakeUpload("blank.pdf")])
 
@@ -86,7 +83,7 @@ def test_upload_with_no_text_shows_warning(fakes, submit):
     fakes.supabase.table.return_value.insert.assert_not_called()
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG: a file docling can't read crashes the app instead of showing an error")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG: a file MarkItDown can't read crashes the app instead of showing an error")
 def test_unreadable_upload_shows_error_instead_of_crashing(fakes, submit):
     fakes.converter.convert.side_effect = RuntimeError("Conversion failed")
 
