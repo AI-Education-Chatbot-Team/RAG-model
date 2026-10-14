@@ -48,11 +48,17 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
-### 2026-10-06: Streamlit CI pipeline and automated tests (Issue #10)
-**Author:** Rett Wilson
-- **What:** Every pull request into `main` now runs a GitHub Actions pipeline that installs the dependencies, checks the Python files compile, and runs automated tests. Results show as a check on the PR.
-- **Why:** Broken code and dependency problems were only found after merging and deploying (see Issue #28). The pipeline catches them before the merge.
-- **How:** Added `.github/workflows/streamlit-ci.yml`, `pytest.ini`, and `tests/`. The tests cover `main.py`, `ingest.py`, and the app itself using Streamlit's `AppTest`. `tests/conftest.py` replaces Supabase, Groq, SentenceTransformer, and docling with fakes so tests run offline without secrets. `tests/test_app_flows.py` covers uploads, summaries, and session search. `tests/test_integration.py` (`pytest -m integration`) runs the real docling parser and embedding model on real PDF, DOCX, TXT, MD, and CSV files. Three known bugs are recorded as `xfail` tests: unreadable uploads crash the app, every chunk is stored as page 1, and RapidOCR writes models into site-packages (Issue #28).
+### 2026-10-06: Fix Permission Issue with Streamlit Cloud
+**Author:** Robbie Lee
+- **What:** Moved from Docling to MarkItDown because Docling was causing a permission error trying to write to streamlit cloud.
+- **Why:** Docling was trying to create models and documents in streamlit cloud, however, the streamlit cloud container is write only.
+- **How:** To get around Streamlit's write only, we moved to MarkItDown. Using this streamlit does not throw a permissions error and parses many more document types to markdown.
+
+### 2026-10-05: Refactor Ingestion
+**Author:** Robbie Lee
+- **What:** Updated file ingestion to use Docling for better parsing and LLM reading. Also refactored much of the code base removing unused functions
+- **Why:** Before our file parsing was grabbing raw text which resulted in a lot of data loss.
+- **How:** Imported docling and used built in converter to convert file types to markdown.
 
 ### 2026-09-30: Documentation restructure (Issue #13)
 **Author:** Rett Wilson
@@ -121,8 +127,6 @@ Open PRs that are not yet merged into `main`. Move each one into the Change Log 
 
 | PR | Branch | Issues | Summary |
 |----|--------|--------|---------|
-| #15 | `session_memory` → `dev` | #9, #14 | Per-user session IDs for uploaded documents. Documents are cleared on "Clear chat" or after 30 minutes. Supports summary-style questions ("What is this document about?") against the most recently uploaded document. |
-| #16 | `dev` → `main` | #11, #12 | Upload support for PDF, TXT, MD, DOCX, and CSV. Removes the faithfulness score. (`.pptx` support and docling-based parsing from #11 are not included.) |
 
 ## Open Issues
 

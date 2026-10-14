@@ -113,8 +113,13 @@ Content:
 def generate_answer(question: str, chunks: list[dict]):
     context = _build_context_str(chunks)
 
-    system_prompt = f"""You are a helpful assistant. Answer the question using ONLY the provided context.
-If the answer isn't in the context, state that it is not in the database.
+    if not context or not context.strip():
+        system_prompt = f"""You are a helpful and friendly AI assistant, you main purpose is to generalize and specify information within user uploaded documents. 
+You can chat casually with the user (e.g., greetings, pleasantries), but you DO NOT have access to outside facts, general knowledge, or information outside of uploaded documents. 
+
+If the user asks a knowledge-based question (like science, history, or facts) and no document context is available, you must politely inform them that you cannot answer without an uploaded document and gently guide them to upload one."""
+    else:
+        system_prompt = f"""You are a helpful assistant. You must answer the question using ONLY the provided document context below. Do not use outside knowledge.
 
 Context:
 {context}"""

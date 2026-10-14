@@ -1,11 +1,6 @@
 import os
-import tempfile
-
-os.environ["RAPIDOCR_MODEL_DIR"] = os.path.join(tempfile.gettempdir(), "rapidocr_models")
-
-import io
 from dotenv import load_dotenv
-from docling.document_converter import DocumentConverter
+from markitdown import MarkItDown
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from supabase import create_client
@@ -18,7 +13,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-doc_converter = DocumentConverter()
+md = MarkItDown()
 
 SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md", ".docx", ".csv"]
 
@@ -28,15 +23,16 @@ text_splitter = RecursiveCharacterTextSplitter(
     separators=["\n\n", "\n", "#", ". ", " ", ""]
 )
 
+def extract_to_markdown(file_path: str) -> str:
+    """
+    Converts PDF, DOCX, PPTX, TXT, MD, XLSX, and HTML into Markdown via MarkItDown.
+    """
+    result = md.convert(file_path)
+    return result.text_content
+
 def extract_and_chunk(file_path: str, source_file_name: str) -> list[dict]:
-    
-    result = doc_converter.convert(file_path)
-    markdown_text = result.document.export_to_markdown()
+    markdown_text = extract_to_markdown(file_path)
 
-    if not markdown_text.strip():
-        return []
-
-    
     if not markdown_text.strip():
         return []
 
