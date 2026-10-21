@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from markitdown import MarkItDown
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from supabase import create_client
 
@@ -36,16 +36,37 @@ def extract_and_chunk(file_path: str, source_file_name: str) -> list[dict]:
     if not markdown_text.strip():
         return []
 
-    raw_chunks = text_splitter.split_text(markdown_text)
+    # 1. Define the headers you want to split by
+    headers_to_split_on = [
+        ("#", "Header 1"),
+        ("##", "Header 2"),
+        ("###", "Header 3"),
+    ]
 
-    return [
-        {
-            "text": chunk,
+    # 2. Initialize the Markdown header splitter
+    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+    header_splits = markdown_splitter.split_text(markdown_text)
+
+    # 3. (Optional) Further chunk large sections using RecursiveCharacterTextSplitter
+    chunk_size = 1000
+    chunk_overlap = 150
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
+    final_splits = text_splitter.split_documents(header_splits)
+
+    chunks_with_meta = []
+    for split in final_splits:
+        header_context = " > ".join([val for key, val in split.metadata.items() if key.startswith("Header")])
+        chunk_content = f"[{header_context}]\n{split.page_content}" if header_context else split.page_content
+
+        chunks_with_meta.append({
+            "text": chunk_content,
             "source_file": source_file_name,
             "page_number": 1,
-        }
-        for chunk in raw_chunks
-    ]
+        })
+
+    return chunks_with_meta
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
     words = text.split()
