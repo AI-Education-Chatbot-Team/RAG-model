@@ -38,19 +38,25 @@ def render_sources(sources_list):
     if not sources_list:
         return
     with st.expander("Sources"):
+        seen_files = set()
         for s in sources_list:
-            if s.get("type") == "Full Document Summary":
-                st.markdown(
-                    f"- **{s.get('source_file', 'Unknown')}** "
-                    f"(type: Full Document Summary)"
-                )
-            else:
-                sim = s.get("similarity")
-                sim_str = f"{sim:.2f}" if sim is not None else "1.00"
-                st.markdown(
-                    f"- **{s.get('source_file', 'Unknown')}"
-                    f"(similarity: {sim_str})"
-                )
+            source_file = s.get("source_file", "Unknown")
+            
+            # Only render if we haven't seen this document file yet
+            if source_file not in seen_files:
+                seen_files.add(source_file)
+                
+                if s.get("type") == "Full Document Summary":
+                    st.markdown(
+                        f"-  **{source_file}**  "
+                        f"(type: Full Document Summary)"
+                    )
+                else:
+                    sim = s.get("similarity")
+                    sim_str = f"{sim:.2f}" if sim is not None else "1.00"
+                    st.markdown(
+                        f"- **{source_file}** (similarity: {sim_str})"
+                    )
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
