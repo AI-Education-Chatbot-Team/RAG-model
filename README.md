@@ -48,6 +48,12 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
+### 2026-10-21: Chatbot Testing and Bug Identification (PR #38)
+**Author:** Shamyla Taylor
+- **What:** Tested the chatbot's accuracy, document retrieval, and ability to understand different question phrasing.
+- **Why:** To verify that the chatbot answers questions correctly and identify issues before changes are merged.
+- **How:** Tested TXT, MD, and DOCX files locally using different questions and unusual wording. Found an issue where asking for a summary about Sandy Cheeks returned a summary of the entire document instead.
+  
 ### 2026-10-06: Fix Permission Issue with Streamlit Cloud
 **Author:** Robbie Lee
 - **What:** Moved from Docling to MarkItDown because Docling was causing a permission error trying to write to streamlit cloud.
