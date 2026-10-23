@@ -48,6 +48,12 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
+### 2026-10-21: Simlarity Score (PR #37)
+**Author:** Shamyla Taylor
+- **What:** Tested the chatbot's similarity scores, document retrieval, and duplicate-source handling.
+- **Why:** To verify that the chatbot displays similarity scores, retrieves accurate information, and avoids listing the same document multiple times.
+- **How:** Ran the chatbot locally using different documents and questions. Verified that similarity scores appeared, answers were accurate, and duplicate sources were not displayed during testing.
+  
 ### 2026-10-21: Chatbot Testing and Bug Identification (PR #38)
 **Author:** Shamyla Taylor
 - **What:** Tested the chatbot's accuracy, document retrieval, and ability to understand different question phrasing.
