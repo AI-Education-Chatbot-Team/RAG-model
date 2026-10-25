@@ -15,7 +15,7 @@ pytestmark = pytest.mark.integration
 @pytest.fixture(scope="module")
 def real_ingest():
     """Swap the fakes from conftest for the real converter and embedding model."""
-    import ingest
+    import src.ingest as ingest
     from conftest import REAL
 
     old = (ingest.md, ingest.model)

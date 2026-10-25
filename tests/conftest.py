@@ -29,8 +29,8 @@ for target in (
     REAL[target] = pkgutil.resolve_name(f"{module}:{attr}")
     patch(target, MagicMock()).start()
 
-import ingest  # noqa: E402
-import main  # noqa: E402
+import src.ingest as ingest  # noqa: E402
+import src.main as main  # noqa: E402
 
 
 class FakeEmbedder:

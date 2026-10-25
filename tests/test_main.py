@@ -1,4 +1,4 @@
-import main
+import src.main as main
 from conftest import make_stream
 
 

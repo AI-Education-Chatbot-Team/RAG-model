@@ -1,4 +1,4 @@
-import ingest
+import src.ingest as ingest
 
 
 def test_chunk_text_overlaps_chunks():
