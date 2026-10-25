@@ -28,7 +28,7 @@ To run chatbot in terminal run:<br>
 `python3 main.py`
 
 To run localhost run:<br>
-`streamlit run app.py`
+`streamlit run src/app.py`
 
 ## Running Tests
 Install pytest:<br>
