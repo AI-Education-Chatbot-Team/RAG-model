@@ -12,29 +12,40 @@ def test_is_summary_request_ignores_specific_questions():
     assert not main.is_summary_request("Who is Luke Skywalker's father?")
 
 
-def test_build_context_str_includes_source_and_page():
-    context = main._build_context_str([
-        {"source_file": "notes.pdf", "page_number": 3, "content": "Chunk text"},
-    ])
-    assert "[Source: notes.pdf, p.3]" in context
+def test_is_summary_request_ignores_scoped_requests():
+    assert not main.is_summary_request("Summarize chapter 3")
+    assert not main.is_summary_request("Give me an overview of the table on page 2")
+
+
+def test_build_context_str_includes_source():
+    context = main._build_context_str(
+        [{"source_file": "notes.pdf", "content": "Chunk text"}]
+    )
+    assert "[Source: notes.pdf]" in context
     assert "Chunk text" in context
 
 
 def test_build_context_str_handles_missing_fields():
-    context = main._build_context_str([{}])
-    assert "[Source: Unknown, p.N/A]" in context
+    assert "[Source: Unknown]" in main._build_context_str([{}])
 
 
 def test_retrieve_context_filters_by_session(fakes):
-    fakes.supabase.rpc.return_value.execute.return_value.data = [{"content": "hit"}]
+    fakes.set_rpc(hybrid_search=[{"content": "hit"}])
 
     result = main.retrieve_context("question", session_id="abc")
 
     assert result == [{"content": "hit"}]
     name, params = fakes.supabase.rpc.call_args.args
-    assert name == "match_documents"
+    assert name == "hybrid_search"
     assert params["filter_session_id"] == "abc"
+    assert params["query_text"] == "question"
     assert params["query_embedding"] == [0.1, 0.2, 0.3]
+    assert params["match_count"] == main.TOP_K
+
+
+def test_retrieve_context_without_session_returns_nothing(fakes):
+    assert main.retrieve_context("question", session_id=None) == []
+    fakes.supabase.rpc.assert_not_called()
 
 
 def test_generate_answer_streams_tokens(fakes):
@@ -45,13 +56,28 @@ def test_generate_answer_streams_tokens(fakes):
     assert answer == "The answer"
     messages = fakes.groq.chat.completions.create.call_args.kwargs["messages"]
     assert "context" in messages[0]["content"]
+    assert messages[-1] == {"role": "user", "content": "question"}
 
 
-def test_generate_summary_without_upload_asks_for_document(fakes):
-    fakes.supabase.table.return_value.select.return_value.eq.return_value \
-        .order.return_value.limit.return_value.execute.return_value.data = []
+def test_generate_answer_includes_recent_history(fakes):
+    history = [
+        {"role": "user", "content": "Who is Luke?"},
+        {"role": "assistant", "content": "A Jedi."},
+    ]
 
-    summary = "".join(main.generate_summary("session-1"))
+    "".join(main.generate_answer("And his father?", [{"content": "c"}], history=history))
 
-    assert "upload one first" in summary
+    messages = fakes.groq.chat.completions.create.call_args.kwargs["messages"]
+    assert [m["content"] for m in messages[1:-1]] == ["Who is Luke?", "A Jedi."]
+
+
+def test_condense_question_without_history_skips_the_llm(fakes):
+    assert main.condense_question("What is ATP?", []) == "What is ATP?"
+    fakes.groq.chat.completions.create.assert_not_called()
+
+
+def test_generate_summary_without_files_asks_for_document(fakes):
+    summary = "".join(main.generate_summary("session-1", []))
+
+    assert "Upload one first" in summary
     fakes.groq.chat.completions.create.assert_not_called()

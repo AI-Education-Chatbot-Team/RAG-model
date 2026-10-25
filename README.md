@@ -48,6 +48,17 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
+### 2026-10-25: MAJOR REFACTOR (PR #, Issues #36 #39)
+**Author:** Robbie Lee
+- **What:** Refactored repo to make it more structured and organized. Also worked on the codebase from the ground up to fix prior issues with ingestion. Made changes to model loading for performance. Working from second table to not break deployed.
+- **Why:** We were having ingestion issues and document retrieval bugs, these changes where to mitigate those issues. While I was fixing I also made structural changes to the files to make them more readable.
+- **How:** 
+    - **main.py**: Restructured constants at the top of file to make slight changes easier, added formatting, and added chat history. Implemented Re-Rank to go through to implement vector + full-text search for more accurate results. Also refactored how summarizations are handles
+    - **ingest.py**: Refactored constants at the top of file to make slight changes easier. Added chunking for tables. Other minor refactoring
+    - **app.py**: Added documents tab for users to remove individual documents. Added helper functions to make codebase cleaner. Modified source retrieval to retrieve context and chunk index for help debugging.
+    - **shared.py**: This file is one place to load the model and client so they are not loaded multiple times per session.
+    - **/src/**: Organized all files into src to keep codebase organized.
+
 ### 2026-10-21: Simlarity Score (PR #37)
 **Author:** Shamyla Taylor
 - **What:** Tested the chatbot's similarity scores, document retrieval, and duplicate-source handling.
