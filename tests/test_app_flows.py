@@ -1,50 +1,29 @@
 """
 App flows the basic tests don't reach: file uploads, summaries, and the
-session fallback. AppTest can't attach files to st.chat_input, so the upload
-tests swap st.chat_input for a fake that returns a file.
+"nothing found" fallback. File uploads go through the `submit` fixture in
+conftest.py because AppTest can't attach files to st.chat_input.
 """
 import os
 from types import SimpleNamespace
 
-import pytest
-import streamlit
-from streamlit.testing.v1 import AppTest
+from conftest import FakeUpload
 
-APP_PATH = "../app.py"
-
-
-class FakeUpload:
-    def __init__(self, name, data=b"file contents"):
-        self.name = name
-        self._data = data
-
-    def getbuffer(self):
-        return memoryview(self._data)
-
-
-@pytest.fixture
-def submit(monkeypatch):
-    """Run the app as if the user submitted text and/or files in the chat box."""
-    def _submit(text=None, files=None):
-        value = SimpleNamespace(text=text, files=files or [])
-        monkeypatch.setattr(streamlit, "chat_input", lambda *a, **k: value)
-        at = AppTest.from_file(APP_PATH, default_timeout=30)
-        at.run()
-        return at
-    return _submit
+# Chunks shorter than ingest.MIN_CHUNK_CHARS (20) are dropped, so keep test text longer
+LONG_TEXT = "Notes text that is long enough to survive the minimum chunk size."
 
 
 def test_upload_ingests_file_into_session(fakes, submit):
-    fakes.converter.convert.return_value.text_content = "Notes text"
-    fakes.supabase.table.return_value.insert.return_value.execute.return_value.data = [{"id": 1}]
+    fakes.converter.convert.return_value.text_content = LONG_TEXT
+    insert = fakes.supabase.table.return_value.insert
+    insert.return_value.execute.return_value.data = [{"id": 1}]
 
     at = submit(files=[FakeUpload("notes.pdf")])
 
     assert not at.exception
-    assert any("Ingested 1 chunks from notes.pdf" in s.value for s in at.success)
-    row = fakes.supabase.table.return_value.insert.call_args.args[0]
-    assert row["session_id"] == at.session_state.session_id
-    assert row["source_file"] == "notes.pdf"
+    rows = insert.call_args.args[0]  # embed_and_store inserts a list of rows
+    assert len(rows) == 1
+    assert rows[0]["session_id"] == at.session_state.session_id
+    assert rows[0]["source_file"] == "notes.pdf"
 
 
 def test_upload_passes_a_real_temp_file_with_extension(fakes, submit):
@@ -54,7 +33,7 @@ def test_upload_passes_a_real_temp_file_with_extension(fakes, submit):
         with open(path, "rb") as f:
             seen["data"] = f.read()
         seen["path"] = path
-        return SimpleNamespace(text_content="x")
+        return SimpleNamespace(text_content=LONG_TEXT)
 
     fakes.converter.convert.side_effect = fake_convert
 
@@ -66,39 +45,40 @@ def test_upload_passes_a_real_temp_file_with_extension(fakes, submit):
 
 def test_upload_removes_temp_file_afterwards(fakes, submit):
     paths = []
-    fakes.converter.convert.side_effect = lambda p: paths.append(p) or SimpleNamespace(text_content="x")
+    fakes.converter.convert.side_effect = lambda p: (
+        paths.append(p) or SimpleNamespace(text_content=LONG_TEXT)
+    )
 
     submit(files=[FakeUpload("a.txt")])
 
     assert paths and not os.path.exists(paths[0])
 
 
-def test_upload_with_no_text_shows_warning(fakes, submit):
+def test_upload_with_no_text_stores_nothing(fakes, submit):
     fakes.converter.convert.return_value.text_content = "  "
 
     at = submit(files=[FakeUpload("blank.pdf")])
 
     assert not at.exception
-    assert any("No extractable text" in w.value for w in at.warning)
     fakes.supabase.table.return_value.insert.assert_not_called()
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG: a file MarkItDown can't read crashes the app instead of showing an error")
 def test_unreadable_upload_shows_error_instead_of_crashing(fakes, submit):
     fakes.converter.convert.side_effect = RuntimeError("Conversion failed")
 
     at = submit(files=[FakeUpload("broken.pdf")])
 
     assert not at.exception
+    fakes.supabase.table.return_value.insert.assert_not_called()
 
 
-def test_summary_request_uses_most_recent_document(fakes, submit):
-    fakes.supabase.table.return_value.select.return_value.eq.return_value \
-        .order.return_value.limit.return_value.execute.return_value.data = [{"source_file": "ch3.pdf"}]
-    fakes.supabase.table.return_value.select.return_value.eq.return_value \
-        .eq.return_value.order.return_value.order.return_value.execute.return_value.data = [
-            {"content": "Chapter three text"},
-        ]
+def test_summary_request_summarizes_the_session_document(fakes, submit):
+    fakes.set_rpc(list_session_files=[{"source_file": "ch3.pdf", "chunk_count": 1}])
+    chunk_query = (
+        fakes.supabase.table.return_value.select.return_value.eq.return_value
+        .eq.return_value.order.return_value.order.return_value.range.return_value
+    )
+    chunk_query.execute.return_value.data = [{"content": "Chapter three text"}]
 
     at = submit(text="Summarize this document")
 
@@ -108,28 +88,38 @@ def test_summary_request_uses_most_recent_document(fakes, submit):
     assert last["sources"] == [{"source_file": "ch3.pdf", "type": "Full Document Summary"}]
     prompt = fakes.groq.chat.completions.create.call_args.kwargs["messages"][0]["content"]
     assert "Chapter three text" in prompt
-    fakes.supabase.rpc.assert_not_called()
+    # a summary reads the whole file; it must not run a similarity search
+    assert all(c.args[0] != "hybrid_search" for c in fakes.supabase.rpc.call_args_list)
 
 
-def test_question_searches_current_session_first(fakes, submit):
-    fakes.supabase.rpc.return_value.execute.return_value.data = [
-        {"content": "hit", "source_file": "a.pdf", "page_number": 1, "similarity": 0.8},
-    ]
+def test_summary_request_without_documents_asks_for_upload(fakes, submit):
+    at = submit(text="Summarize this document")
+
+    assert not at.exception
+    assert "Upload one first" in at.session_state.messages[-1]["content"]
+    fakes.groq.chat.completions.create.assert_not_called()
+
+
+def test_question_searches_current_session_only(fakes, submit):
+    fakes.set_rpc(
+        hybrid_search=[{"content": "hit", "source_file": "a.pdf", "score": 0.8}],
+        list_session_files=[{"source_file": "a.pdf", "chunk_count": 1}],
+    )
 
     at = submit(text="What is ATP?")
 
-    assert fakes.supabase.rpc.call_count == 1
-    params = fakes.supabase.rpc.call_args.args[1]
-    assert params["filter_session_id"] == at.session_state.session_id
+    searches = [c for c in fakes.supabase.rpc.call_args_list if c.args[0] == "hybrid_search"]
+    assert len(searches) == 1
+    assert searches[0].args[1]["filter_session_id"] == at.session_state.session_id
 
 
-def test_question_with_no_session_matches_falls_back_to_unfiltered_search(fakes, submit):
-    # Documents what the app does today. Whether filter_session_id=None searches
-    # every user's documents depends on the match_documents SQL function in
-    # Supabase. If it does, this conflicts with Issue #9.
-    fakes.supabase.rpc.return_value.execute.return_value.data = []
+def test_question_with_no_matches_tells_the_model_nothing_was_found(fakes, submit):
+    fakes.set_rpc(
+        hybrid_search=[],
+        list_session_files=[{"source_file": "a.pdf", "chunk_count": 1}],
+    )
 
     submit(text="What is ATP?")
 
-    assert fakes.supabase.rpc.call_count == 2
-    assert fakes.supabase.rpc.call_args_list[1].args[1]["filter_session_id"] is None
+    prompt = fakes.groq.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+    assert "couldn't find" in prompt

@@ -40,7 +40,7 @@ jobs:
           pip install -r requirements.txt pytest reportlab python-docx
 
       - name: Check Python files compile
-        run: python -m py_compile app.py main.py ingest.py
+        run: python -m py_compile src/app.py src/main.py src/ingest.py src/shared.py
 
       # Tests fake Supabase, Groq, and the ML models, so no secrets are needed
       - name: Run tests

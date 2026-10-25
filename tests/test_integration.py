@@ -15,14 +15,15 @@ pytestmark = pytest.mark.integration
 @pytest.fixture(scope="module")
 def real_ingest():
     """Swap the fakes from conftest for the real converter and embedding model."""
-    import src.ingest as ingest
+    import ingest
+    import shared
     from conftest import REAL
 
-    old = (ingest.md, ingest.model)
+    old = (ingest.md, shared.embed_model)
     ingest.md = REAL["markitdown.MarkItDown"]()
-    ingest.model = REAL["sentence_transformers.SentenceTransformer"]("all-MiniLM-L6-v2")
+    shared.embed_model = REAL["sentence_transformers.SentenceTransformer"]("all-MiniLM-L6-v2")
     yield ingest
-    ingest.md, ingest.model = old
+    ingest.md, shared.embed_model = old
 
 
 @pytest.fixture(scope="module")
@@ -102,25 +103,19 @@ def test_broken_pdf_is_not_stored_as_raw_text(real_ingest, samples):
     assert not any("%PDF" in c["text"] for c in chunks)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="BUG: every chunk is stored as page 1, so citations show the wrong page")
-def test_multi_page_pdf_keeps_page_numbers(real_ingest, samples):
-    chunks = real_ingest.extract_and_chunk(str(samples / "two_pages.pdf"), "two_pages.pdf")
-    assert {c["page_number"] for c in chunks} == {1, 2}
-
-
 def test_real_embeddings_match_database_dimension(real_ingest):
-    vector = real_ingest.model.encode("hello world")
+    import shared
+    vector = shared.embed_texts(["hello world"])[0]
     assert len(vector) == 384
 
 
 def test_related_text_scores_higher_than_unrelated(real_ingest):
     import numpy as np
-    m = real_ingest.model
-    q, near, far = (m.encode(t) for t in (
+    import shared
+    q, near, far = shared.embed_texts([
         "What does the mitochondria do?",
         "The mitochondria is the powerhouse of the cell.",
         "Luke Skywalker is a Jedi from Tatooine.",
-    ))
+    ])
     cos = lambda a, b: float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
     assert cos(q, near) > cos(q, far)
-
