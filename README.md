@@ -48,7 +48,7 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
-### 2026-10-25: MAJOR REFACTOR (PR #, Issues #36 #39)
+### 2026-10-25: MAJOR REFACTOR (PR #40, Issues #36 #39)
 **Author:** Robbie Lee
 - **What:** Refactored repo to make it more structured and organized. Also worked on the codebase from the ground up to fix prior issues with ingestion. Made changes to model loading for performance. Working from second table to not break deployed.
 - **Why:** We were having ingestion issues and document retrieval bugs, these changes where to mitigate those issues. While I was fixing I also made structural changes to the files to make them more readable.
