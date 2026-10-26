@@ -127,6 +127,9 @@ def embed_and_store(
     return inserted_ids
 
 MAX_URL_BYTES = 5_000_000
+URL_HEADERS = {
+    "User-Agent": "RAG-Knowledge-Assistant/1.0 (student project; https://github.com/AI-Education-Chatbot-Team/RAG-model)"
+}
 
 
 def _check_public_url(url: str) -> str:
@@ -148,7 +151,9 @@ def fetch_url_to_file(url: str) -> str:
     """Download a public web page to a temp .html file and return its path."""
     for _ in range(4):  # follow a few redirects, re-checking every hop
         url = _check_public_url(url)
-        resp = requests.get(url, timeout=10, allow_redirects=False, stream=True)
+        resp = requests.get(
+            url, headers=URL_HEADERS, timeout=10, allow_redirects=False, stream=True
+        )
         if not resp.is_redirect:
             break
         url = urljoin(url, resp.headers.get("Location", ""))
