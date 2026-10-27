@@ -70,7 +70,7 @@ with st.sidebar:
         st.button("Remove all documents", on_click=remove_all_documents)
 
     st.divider()
-    with st.form("add_url_form", clear_on_submit=True):
+    with st.form("add_url_form", clear_on_submit=True, enter_to_submit=False):
         url = st.text_input("Add a web page", placeholder="https://example.com/article")
         add_url = st.form_submit_button("Add URL")
     if add_url and url.strip():
