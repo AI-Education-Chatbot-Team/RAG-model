@@ -49,6 +49,7 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
 ### URL Ingestion Testing – PR #41
+**Author:** Shamyla Taylor
 **What:** Manually tested URL ingestion locally using Streamlit. **13 tests completed.**
 **Why:** To verify website uploads, summaries, removal, and error handling.
 **How:** Uploaded the Auburn University website and tested the chatbot's responses.
@@ -64,6 +65,7 @@ Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
   
 ### Chatbot Testing 
+**Author:** Shamyla Taylor
 **What:** Manually tested the updated chatbot locally using TXT, Markdown, and PDF files. **12 tests: 10 passed, 2 failed.**
 **Why:** To verify answer accuracy, document summarization, and source references.
 **How:** Uploaded documents, asked questions, and compared responses with the original files.
