@@ -48,13 +48,48 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
-### 2026-10-21: Similarity Score (PR #37)
+### URL Ingestion Testing – PR #41
+**What:** Manually tested URL ingestion locally using Streamlit. **13 tests completed.**
+**Why:** To verify website uploads, summaries, removal, and error handling.
+**How:** Uploaded the Auburn University website and tested the chatbot's responses.
+**Passed:**
+- Website upload, question answering, and summarization.
+- Website removal from Documents.
+- Invalid and inaccessible URL handling.
+- Fresh session correctly showed no documents.
+- Failed uploads were not added to Documents.
+**Issues Found:**
+- After removing the website and clearing chat, the chatbot still claimed it had access to it.
+- Incorrectly identified the website as a PDF and couldn't provide its URL.
+
+  
+### Chatbot Testing 
+**What:** Manually tested the updated chatbot locally using TXT, Markdown, and PDF files. **12 tests: 10 passed, 2 failed.**
+**Why:** To verify answer accuracy, document summarization, and source references.
+**How:** Uploaded documents, asked questions, and compared responses with the original files.
+**Passed (10):**
+1. `Luna.txt` – Correct favorite food.
+2. Reworded question – Consistent answer.
+3. Missing information – Correctly handled.
+4. Full TXT summary – Accurate.
+5. Sunny question – Correct answer.
+6. `Rocky.md` – Correct favorite toy.
+7. Multiple documents – Correct answers.
+8. PDF question – Correct SHA-256 answer.
+9. PDF summary – Accurate main features.
+10. Security Log Analyzer – Correct explanation.
+**Failed (2):**
+1. **TXT:** Focused summary about Sunny included unrelated information.
+2. **PDF:** Focused summary about the Security Log Analyzer included unrelated sections.
+
+
+### Testing Similarity Score (PR #37)
 **Author:** Shamyla Taylor
 - **What:** Tested the chatbot's similarity scores, document retrieval, and duplicate-source handling.
 - **Why:** To verify that the chatbot displays similarity scores, retrieves accurate information, and avoids listing the same document multiple times.
 - **How:** Ran the chatbot locally using different documents and questions. Verified that similarity scores appeared, answers were accurate, and duplicate sources were not displayed during testing.
   
-### 2026-10-21: Chatbot Testing and Bug Identification (PR #38)
+### Chatbot Testing and Bug Identification (PR #38)
 **Author:** Shamyla Taylor
 - **What:** Tested the chatbot's accuracy, document retrieval, and ability to understand different question phrasing.
 - **Why:** To verify that the chatbot answers questions correctly and identify issues before changes are merged.
