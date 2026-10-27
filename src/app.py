@@ -18,6 +18,7 @@ from ingest import (
     embed_and_store,
     delete_session_documents,
     delete_file_documents,
+    ingest_url,
 )
 
 st.title("🤖 RAG Knowledge Assistant")
@@ -67,6 +68,21 @@ with st.sidebar:
     st.button("Clear chat", on_click=clear_chat)
     if session_files:
         st.button("Remove all documents", on_click=remove_all_documents)
+
+    st.divider()
+    with st.form("add_url_form", clear_on_submit=True, enter_to_submit=False):
+        url = st.text_input("Add a web page", placeholder="https://example.com/article")
+        add_url = st.form_submit_button("Add URL")
+    if add_url and url.strip():
+        try:
+            with st.spinner("Reading page..."):
+                ingest_url(url, session_id=SESSION_ID)
+        except ValueError as e:
+            st.error(str(e))
+        except Exception:
+            st.error("Couldn't read that page.")
+        else:
+            st.rerun()
 
 
 # Helper Functions

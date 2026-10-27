@@ -1,5 +1,11 @@
 # ingest.py
+import ipaddress
 import os
+import socket
+import tempfile
+from urllib.parse import urljoin, urlparse
+
+import requests
 from markitdown import MarkItDown
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
@@ -119,6 +125,63 @@ def embed_and_store(
 
     print(f"Ingested {len(rows)} chunks into Supabase.")
     return inserted_ids
+
+MAX_URL_BYTES = 5_000_000
+URL_HEADERS = {
+    "User-Agent": "RAG-Knowledge-Assistant/1.0 (student project; https://github.com/AI-Education-Chatbot-Team/RAG-model)"
+}
+
+
+def _check_public_url(url: str) -> str:
+    """Allow only http(s) URLs that resolve to public IPs (blocks SSRF)."""
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Please enter a valid http(s) URL.")
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, None)
+    except socket.gaierror:
+        raise ValueError("Couldn't resolve that hostname.")
+    for info in infos:
+        if not ipaddress.ip_address(info[4][0]).is_global:
+            raise ValueError("That URL points to a non-public address.")
+    return parsed.geturl()
+
+
+def fetch_url_to_file(url: str) -> str:
+    """Download a public web page to a temp .html file and return its path."""
+    for _ in range(4):  # follow a few redirects, re-checking every hop
+        url = _check_public_url(url)
+        resp = requests.get(
+            url, headers=URL_HEADERS, timeout=10, allow_redirects=False, stream=True
+        )
+        if not resp.is_redirect:
+            break
+        url = urljoin(url, resp.headers.get("Location", ""))
+    else:
+        raise ValueError("Too many redirects.")
+    resp.raise_for_status()
+    if "html" not in resp.headers.get("Content-Type", ""):
+        raise ValueError("That URL doesn't look like a web page.")
+    data = resp.raw.read(MAX_URL_BYTES + 1, decode_content=True)
+    if len(data) > MAX_URL_BYTES:
+        raise ValueError("That page is too large to ingest.")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as f:
+        f.write(data)
+    return f.name
+
+
+def ingest_url(url: str, session_id: str | None = None) -> int:
+    """Fetch a web page, chunk it like an uploaded file, and store it."""
+    url = url.strip()
+    path = fetch_url_to_file(url)
+    try:
+        chunks = extract_and_chunk(path, url)
+    finally:
+        os.remove(path)
+    if not chunks:
+        raise ValueError("No readable text found on that page.")
+    embed_and_store(chunks, session_id=session_id)
+    return len(chunks)
 
 
 def delete_documents(ids: list[int]) -> None:

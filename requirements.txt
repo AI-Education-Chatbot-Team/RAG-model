@@ -5,3 +5,4 @@ python-dotenv
 streamlit
 langchain-text-splitters
 markitdown[all]
+requests
