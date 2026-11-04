@@ -19,7 +19,7 @@ jobs:
         run: |
           python - <<'EOF'
           from playwright.sync_api import sync_playwright
-          URL = "https://YOUR-APP.streamlit.app"
+          URL = "https://senior-design-chatbot.streamlit.app"
           with sync_playwright() as p:
               b = p.chromium.launch()
               page = b.new_page()
