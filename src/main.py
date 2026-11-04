@@ -32,6 +32,158 @@ API_ERROR_MSG = (
     "Something went wrong while contacting the language model. Please try again."
 )
 
+# ---------------------------------------------------------------------------
+# PROMPTS
+# LEGACY_* = original generic document-chatbot prompts (kept for rollback)
+# RESUME_* = resume-specialized prompts
+# Placeholders use str.format(): {context}, {format_rules}
+# ---------------------------------------------------------------------------
+
+# ---- LEGACY (original, unchanged) ----
+LEGACY_ANSWER_PROMPT = """You are a helpful assistant that answers questions using ONLY the document context below. Do not use outside knowledge.
+
+Rules:
+- If the answer is not in the context, say so plainly. Do not guess or fill gaps.
+- Mention the source file name when it helps the user know where something came from.
+- Use the earlier conversation only to understand what the user is referring to, not as a source of facts.
+
+{format_rules}
+
+Context:
+{context}"""
+
+LEGACY_NO_MATCH_PROMPT = """You are a helpful assistant that answers questions about the user's uploaded documents.
+No relevant passages were found for this question. Tell the user you couldn't find that in their uploaded documents and suggest rephrasing or asking about something the documents cover. Do not answer from outside knowledge."""
+
+LEGACY_NO_DOCS_PROMPT = """You are a friendly assistant whose purpose is to answer questions about documents the user uploads.
+You can chat casually (greetings, pleasantries), but you have NO access to outside facts or general knowledge.
+If the user asks a knowledge question and no documents are uploaded, politely explain you can't answer without an uploaded document and invite them to upload one."""
+
+LEGACY_CONDENSE_PROMPT = (
+    "Rewrite the user's last message as a standalone search query, using the "
+    "conversation for context. Resolve pronouns and references. "
+    "Output only the query, nothing else."
+)
+
+LEGACY_SUMMARY_RULES = (
+    "Cover the main points and overall purpose. Do not infer anything outside of the "
+    "document. Do not mention chunks or excerpts; write as if you read the whole document."
+)
+
+LEGACY_SUMMARY_FORMAT_DOC = (
+    "Format: a one-sentence overview, then short markdown headers for the main sections "
+    "with bullet points (or brief body text) under each."
+)
+
+LEGACY_DOC_STYLE = (
+    "Prose documents (reports, resumes, articles): structure the answer like a document. "
+    "For multi-part answers use short markdown headers followed by body text or bullet points; "
+    "use bullets for lists of items (skills, requirements, steps, findings); "
+    "for a simple factual question, answer in one or two plain sentences with no headers."
+)  # see Formatting section; keep the original string there too
+
+# ---- RESUME (new) ----
+RESUME_ANSWER_PROMPT = """You are a resume assistant. You answer questions about the resumes the user has uploaded, using ONLY the resume context below. Do not use outside knowledge about the candidates.
+
+Rules:
+- Never invent employers, job titles, dates, degrees, skills, or metrics. If something isn't stated, say "The resume doesn't mention that."
+- Quote job titles, company names, degrees, and technologies exactly as written.
+- For questions about experience length, list the date ranges you used. If a date is missing or says "Present", say so instead of guessing.
+- Distinguish what is explicitly listed (e.g., in a Skills section) from what is only implied by a job description.
+- If more than one resume is loaded, always state which candidate or file each fact comes from. Never mix details between candidates.
+- Do not infer or comment on age, gender, ethnicity, nationality, religion, marital status, or other protected traits, even if asked. If asked to, politely decline and offer to compare on skills and experience instead.
+- Use earlier conversation only to understand what the user is referring to, not as a source of facts.
+
+{format_rules}
+
+Resume context:
+{context}"""
+
+RESUME_NO_MATCH_PROMPT = """You are a resume assistant. No relevant passages were found in the uploaded resumes for this question.
+Tell the user the resumes don't appear to contain that information. Suggest a rephrase, or name a few things resumes typically cover (experience, skills, education, projects, certifications). Do not answer from outside knowledge."""
+
+RESUME_NO_DOCS_PROMPT = """You are a friendly resume assistant. You help users understand, review, and improve resumes they upload.
+You can chat casually, but you have no resumes to work from yet.
+If the user asks about a candidate or resume content, explain that you need a resume uploaded first (PDF, DOCX, TXT, or MD) and invite them to upload one. Do not make up resume content."""
+
+RESUME_CONDENSE_PROMPT = (
+    "Rewrite the user's last message as a standalone search query for finding passages in resumes. "
+    "Resolve pronouns and references (e.g., 'she', 'that job', 'the second candidate') using the "
+    "conversation. Keep candidate names, company names, and skill names. "
+    "Output only the query, nothing else."
+)
+
+RESUME_SUMMARY_RULES = (
+    "Use only facts stated in the resume. Do not infer anything outside the document, "
+    "do not guess missing dates, and do not comment on protected traits. "
+    "Do not mention chunks or excerpts; write as if you read the whole resume."
+)
+
+RESUME_SUMMARY_FORMAT = (
+    "Format as a candidate profile in markdown:\n"
+    "- **Headline**: one sentence (current/most recent role + focus area)\n"
+    "- **Experience**: total years only if dates make it clear, then the 3 most recent roles "
+    "as 'Title, Company (dates)' with one bullet of impact each\n"
+    "- **Key skills**: grouped bullets as listed in the resume\n"
+    "- **Education & certifications**\n"
+    "- **Notable projects or achievements** (only if present)\n"
+    "Omit any section the resume doesn't contain."
+)
+
+RESUME_DOC_STYLE = (
+    "Resumes: for a simple factual question, answer in one or two plain sentences with no headers. "
+    "For multi-part answers use short markdown headers (e.g., Experience, Skills, Education). "
+    "Use bullets for lists of skills, roles, or achievements. "
+    "When comparing candidates, use a markdown table with one column per candidate."
+)
+
+# ---- NEW TASK PROMPTS (resume-only, no legacy equivalent) ----
+JD_MATCH_PROMPT = """You are an experienced recruiter. Compare the resume to the job description.
+Use only facts present in the resume; never assume a skill that isn't written.
+
+Output in markdown:
+1. **Match score (0-100)** with a one-line justification
+2. **Requirements clearly met**: each with the resume evidence
+3. **Missing or weak requirements**
+4. **JD keywords absent from the resume**
+5. **Top 3 changes** that would most improve the match
+
+RESUME:
+{resume}
+
+JOB DESCRIPTION:
+{jd}"""
+
+RESUME_IMPROVE_PROMPT = """You are a resume coach. Review the resume and give specific, actionable feedback.
+Rules:
+- Rewrite weak bullets into achievement format: action verb + what + result.
+- If a bullet needs a number you don't have, write a placeholder like [X%] and tell the user to fill it in. Never invent metrics.
+- Flag vague wording, passive voice, missing sections, and inconsistent dates or formatting.
+- Keep every rewrite truthful to what the resume already says.
+
+Output: **Overall impression** (2 sentences), **Strengths**, **Top 5 fixes** (before -> after), **Missing sections**.
+
+RESUME:
+{resume}"""
+
+# ---- ACTIVE PROMPT SET ----
+PROMPT_MODE = os.getenv("PROMPT_MODE", "resume")  # "resume" or "legacy"
+
+if PROMPT_MODE == "legacy":
+    ANSWER_PROMPT = LEGACY_ANSWER_PROMPT
+    NO_MATCH_PROMPT = LEGACY_NO_MATCH_PROMPT
+    NO_DOCS_PROMPT = LEGACY_NO_DOCS_PROMPT
+    CONDENSE_PROMPT = LEGACY_CONDENSE_PROMPT
+    SUMMARY_RULES = LEGACY_SUMMARY_RULES
+    DOC_STYLE = LEGACY_DOC_STYLE
+else:
+    ANSWER_PROMPT = RESUME_ANSWER_PROMPT
+    NO_MATCH_PROMPT = RESUME_NO_MATCH_PROMPT
+    NO_DOCS_PROMPT = RESUME_NO_DOCS_PROMPT
+    CONDENSE_PROMPT = RESUME_CONDENSE_PROMPT
+    SUMMARY_RULES = RESUME_SUMMARY_RULES
+    DOC_STYLE = RESUME_DOC_STYLE
+
 _reranker = None
 
 
@@ -101,11 +253,7 @@ def condense_question(question: str, history: list[dict] | None) -> str:
             [
                 {
                     "role": "system",
-                    "content": (
-                        "Rewrite the user's last message as a standalone search query, using the "
-                        "conversation for context. Resolve pronouns and references. "
-                        "Output only the query, nothing else."
-                    ),
+                    "content": CONDENSE_PROMPT,
                 },
                 {"role": "user", "content": f"{convo}\n\nLast message: {question}"},
             ],
@@ -162,12 +310,6 @@ DOCUMENT_EXTS = {".pdf", ".docx", ".md", ".txt"}
 TABULAR_EXTS = {".csv", ".xlsx"}
 SLIDE_EXTS = {".pptx"}
 
-_DOC_STYLE = (
-    "Prose documents (reports, resumes, articles): structure the answer like a document. "
-    "For multi-part answers use short markdown headers followed by body text or bullet points; "
-    "use bullets for lists of items (skills, requirements, steps, findings); "
-    "for a simple factual question, answer in one or two plain sentences with no headers."
-)
 _TABLE_STYLE = (
     "Spreadsheet/table data: keep tabular answers as a markdown table that reuses the source's "
     "exact column names, includes only the relevant rows and columns, and never converts rows "
@@ -187,7 +329,7 @@ def _format_guidance(source_files: list[str]) -> str:
     if exts & TABULAR_EXTS:
         parts.append(_TABLE_STYLE)
     if exts & DOCUMENT_EXTS:
-        parts.append(_DOC_STYLE)
+        parts.append(DOC_STYLE) ## Global Doc Style
     if exts & SLIDE_EXTS:
         parts.append(_SLIDE_STYLE)
     if not parts:
@@ -212,24 +354,12 @@ def generate_answer(
     format_rules = _format_guidance(list({c.get("source_file") for c in chunks}))
 
     if context.strip():
-        system_prompt = f"""You are a helpful assistant that answers questions using ONLY the document context below. Do not use outside knowledge.
+        system_prompt = ANSWER_PROMPT.format(format_rules=format_rules, context=context)
 
-Rules:
-- If the answer is not in the context, say so plainly. Do not guess or fill gaps.
-- Mention the source file name when it helps the user know where something came from.
-- Use the earlier conversation only to understand what the user is referring to, not as a source of facts.
-
-{format_rules}
-
-Context:
-{context}"""
     elif has_documents:
-        system_prompt = """You are a helpful assistant that answers questions about the user's uploaded documents.
-No relevant passages were found for this question. Tell the user you couldn't find that in their uploaded documents and suggest rephrasing or asking about something the documents cover. Do not answer from outside knowledge."""
+        system_prompt = NO_MATCH_PROMPT
     else:
-        system_prompt = """You are a friendly assistant whose purpose is to answer questions about documents the user uploads.
-You can chat casually (greetings, pleasantries), but you have NO access to outside facts or general knowledge.
-If the user asks a knowledge question and no documents are uploaded, politely explain you can't answer without an uploaded document and invite them to upload one."""
+        system_prompt = NO_DOCS_PROMPT
 
     messages = [{"role": "system", "content": system_prompt}]
     # `history` should NOT include the current question
@@ -309,12 +439,6 @@ def _group_chunks(chunks: list[str], max_chars: int) -> list[str]:
     return groups
 
 
-_SUMMARY_RULES = (
-    "Cover the main points and overall purpose. Do not infer anything outside of the "
-    "document. Do not mention chunks or excerpts; write as if you read the whole document."
-)
-
-
 def _summary_format(source_file: str) -> str:
     ext = os.path.splitext(source_file)[1].lower()
     if ext in TABULAR_EXTS:
@@ -325,10 +449,9 @@ def _summary_format(source_file: str) -> str:
         )
     if ext in SLIDE_EXTS:
         return "Format: a one-line overview, then a short header per slide or topic with concise bullets."
-    return (
-        "Format: a one-sentence overview, then short markdown headers for the main sections "
-        "with bullet points (or brief body text) under each."
-    )
+    if PROMPT_MODE == "legacy":
+        return LEGACY_SUMMARY_FORMAT_DOC
+    return RESUME_SUMMARY_FORMAT
 
 
 def _summarize_one(session_id: str, source_file: str):
@@ -345,7 +468,7 @@ def _summarize_one(session_id: str, source_file: str):
             [
                 {
                     "role": "system",
-                    "content": f"You are a helpful assistant. Provide a clear, concise summary of the following document. {_SUMMARY_RULES} {_summary_format(source_file)}\n\nDocument: {source_file}\n\nContent:\n{full_text}",
+                    "content": f"You are a helpful assistant. Provide a clear, concise summary of the following document. {SUMMARY_RULES} {_summary_format(source_file)}\n\nDocument: {source_file}\n\nContent:\n{full_text}",
                 },
                 {"role": "user", "content": "Please summarize this document."},
             ]
@@ -377,7 +500,7 @@ def _summarize_one(session_id: str, source_file: str):
         [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant. Below are summaries of consecutive parts of one document. Combine them into one clear, concise summary of the whole document. {_SUMMARY_RULES} {_summary_format(source_file)}\n\nDocument: {source_file}\n\n"
+                "content": f"You are a helpful assistant. Below are summaries of consecutive parts of one document. Combine them into one clear, concise summary of the whole document. {SUMMARY_RULES} {_summary_format(source_file)}\n\nDocument: {source_file}\n\n"
                 + "\n\n".join(partials),
             },
             {"role": "user", "content": "Please summarize this document."},
@@ -399,3 +522,26 @@ def generate_summary(session_id: str, source_files: list[str]):
         yield "\n\n" + RATE_LIMIT_MSG
     except groq.APIError:
         yield "\n\n" + API_ERROR_MSG
+
+## Matches a resume to a given job description
+MAX_RESUME_CHARS = 16_000
+MAX_JD_CHARS = 8_000
+
+
+def get_full_text(session_id: str, source_file: str, max_chars: int = MAX_RESUME_CHARS) -> str:
+    """Full text of one ingested file, rebuilt from its chunks in document order."""
+    return "\n".join(get_document_chunks(session_id, source_file))[:max_chars]
+
+
+def improve_resume(resume_text: str):
+    """Streams resume feedback and rewritten bullets."""
+    yield from _stream(
+        [
+            {
+                "role": "system",
+                "content": RESUME_IMPROVE_PROMPT.format(resume=resume_text[:MAX_RESUME_CHARS]),
+            },
+            {"role": "user", "content": "Review my resume."},
+        ],
+        temperature=0.3,
+    )

@@ -12,6 +12,8 @@ from main import (
     generate_summary,
     is_summary_request,
     resolve_summary_files,
+    get_full_text,
+    improve_resume,
 )
 from ingest import (
     extract_and_chunk,
@@ -21,14 +23,40 @@ from ingest import (
     ingest_url,
 )
 
-st.title("🤖 RAG Knowledge Assistant")
+# CSS Styling
+st.markdown("""
+    <style>
+    .gradient-underline {
+        background-image: linear-gradient(to right, #E87722, #eac9b1);
+  
+
+        background-repeat: no-repeat;
+        background-size: 100% 4px;
+        background-position: 0 90%;
+  
+        padding-bottom: 5px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
+st.markdown('<h1 class="gradient-underline">Resume Assistant</h1>', unsafe_allow_html=True)
+st.caption("Upload a resume, then ask about experience, skills, or request feedback.")
+
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "pending_action" not in st.session_state:
+    st.session_state.pending_action = None
+
 
 SESSION_ID = st.session_state.session_id
+
+
+def queue_action(action: str):
+    st.session_state.pending_action = action
 
 
 def clear_chat():
@@ -68,6 +96,14 @@ with st.sidebar:
     st.button("Clear chat", on_click=clear_chat)
     if session_files:
         st.button("Remove all documents", on_click=remove_all_documents)
+
+    st.divider()
+    st.subheader("Resume tools")
+
+    st.selectbox(
+        "Resume", [f["source_file"] for f in session_files], key="selected_resume"
+    )
+    st.button("Improve my resume", on_click=queue_action, args=("improve",))
 
     st.divider()
     with st.form("add_url_form", clear_on_submit=True, enter_to_submit=False):
@@ -126,10 +162,46 @@ for message in st.session_state.messages:
         if message.get("sources"):
             render_sources(message["sources"])
 
+# Resume tool actions
+action = st.session_state.pending_action
+if action:
+    st.session_state.pending_action = None
+    resume_name = st.session_state.get("selected_resume")
+
+    if resume_name:
+        user_msg = (
+            f"Match **{resume_name}** to the job description."
+            if action == "match"
+            else f"Review and improve **{resume_name}**."
+        )
+        with st.chat_message("user"):
+            st.markdown(user_msg)
+        st.session_state.messages.append({"role": "user", "content": user_msg})
+
+        with st.chat_message("assistant"):
+            try:
+                resume_text = get_full_text(SESSION_ID, resume_name)
+                if not resume_text.strip():
+                    raise ValueError(f"No readable text found for {resume_name}.")
+
+                else:
+                    stream = improve_resume(resume_text)
+
+                response = st.write_stream(stream)
+                sources_to_save = [{"source_file": resume_name}]
+                render_sources(sources_to_save)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": response, "sources": sources_to_save}
+                )
+            except Exception as e:
+                st.error(f"Something went wrong: {e}")
+                st.session_state.messages.pop()
+
+
 prompt_data = st.chat_input(
-    "Ask a question or upload a document...",
+    "Ask about a resume, or upload one...",
     accept_file="multiple",
-    file_type=["pdf", "docx", "pptx", "txt", "md", "csv", "xlsx"],
+    file_type=["pdf", "docx", "txt", "md"],
 )
 
 if prompt_data:
