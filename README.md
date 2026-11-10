@@ -48,6 +48,22 @@ recorded below with **what** changed, **when**, **why**, and **how**.
 
 Newest first. Dates are the merge date for PRs or the commit date on `main`.
 
+### 2026-11-10: Website Link Retrieval Testing
+**Author:** Shamyla Taylor
+- **What:** Tested the chatbot's ability to retrieve information from website links.
+- **Why:** To ensure the chatbot can use website content to answer user questions.
+- **How:** Added Auburn University's website as a source. Asked questions about Auburn Stories and Adil Bashir. Confirmed the chatbot provided relevant answers and website references. Website content was not independently verified against every linked article.
+
+### 2026-11-10: Conversation Memory Testing
+***Author:** Shamyla Taylor
+- **What**: Tested the chatbot's ability to remember information from previous messages.
+- **Why**: To verify that the chatbot maintains conversation context and answers follow-up questions correctly.
+- **How:**: Cleared uploaded documents and provided information about favorite colors and pets.
+- Asked follow-up questions without repeating the original information.
+- Confirmed the chatbot remembered the details and responded correctly.
+
+
+
 ### URL Ingestion Testing – PR #41
 **Author:** Shamyla Taylor
 **What:** Manually tested URL ingestion locally using Streamlit. **13 tests completed.**
